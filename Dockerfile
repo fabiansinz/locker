@@ -14,17 +14,19 @@ RUN \
 # install HDF5 reader and rabbit-mq client lib
 RUN pip install h5py jupyter
 
-WORKDIR /efish
 
 RUN \
   pip install git+https://github.com/circstat/pycircstat.git && \
-  pip install git+https://github.com/fabiansinz/pyrelacs.git && \
   pip install matplotlib_venn
+
+WORKDIR /src
 
 RUN git clone https://github.com/fabiansinz/pyrelacs.git && \
     pip install -e pyrelacs
 
-# Install pipeline
+WORKDIR /efish
+
+# Install code
 COPY . /efish
 
 RUN \

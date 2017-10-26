@@ -31,10 +31,6 @@ schema = dj.schema('efish_data', locals())
 animals = dj.create_virtual_module('census', 'animal_keeping')
 
 
-
-
-
-
 @schema
 class PaperCells(dj.Lookup):
     definition = """
@@ -84,7 +80,12 @@ class PaperCells(dj.Lookup):
                 {'cell_id': '2017-08-15-ag-invivo-1'},
                 {'cell_id': '2017-08-15-ah-invivo-1'},
                 {'cell_id': '2017-08-15-ai-invivo-1'},
+                {'cell_id': '2017-10-25-ad-invivo-1'},  # bursty
+                {'cell_id': '2017-10-25-ae-invivo-1'},  # bursty
+                {'cell_id': '2017-10-25-aj-invivo-1'},
+                {'cell_id': '2017-10-25-an-invivo-1'},
                 ]
+
 
 @schema
 class EFishes(dj.Imported):
@@ -118,12 +119,10 @@ class EFishes(dj.Imported):
 
         self.insert1(dict(key,
                           id=fish_id,
-                          eod_frequency = float(a['EOD Frequency'][:-2]),
-                          gender = a['Gender'].lower(),
-                          weight = float(a['Weight'][:-1]),
-                          size = float(a['Size'][:-2])))
-
-
+                          eod_frequency=float(a['EOD Frequency'][:-2]),
+                          gender=a['Gender'].lower(),
+                          weight=float(a['Weight'][:-1]),
+                          size=float(a['Size'][:-2])))
 
 
 @schema
@@ -151,7 +150,7 @@ class Cells(dj.Imported):
         cl = a['Cell'] if 'Cell' in a else a['Recording']['Cell']
         # fish_id = EFishes() & #subj['Identifier'],
         dat = {'cell_id': key['cell_id'],
-               'id':  (EFishes() & key).fetch1('id'),
+               'id': (EFishes() & key).fetch1('id'),
                'recording_date': a['Recording']['Date'],
                'cell_type': cl['CellType'].lower(),
                'recording_location': 'nerve' if cl['Structure'].lower() == 'nerve' else 'ell',
@@ -211,7 +210,6 @@ class FICurves(dj.Imported):
         ax.set_ylim((0, 1.5 * ymax))
         mi, ma = np.amin(contrast), np.amax(contrast)
         ax.set_xticks(np.round([mi, (ma + mi) * .5, ma], decimals=1))
-
 
 
 @schema
@@ -373,25 +371,25 @@ class Baseline(dj.Imported):
 
         spikes = [spikes[(spikes >= t - dt) & (spikes < t + dt)] - t for t in pt[cycles // 2::cycles]]
 
-
         # histogram
         db = 1 / eod
-
 
         bins = np.arange(-(cycles // 2) / eod, (cycles // 2) / eod + db, db)
         bin_centers = 0.5 * (bins[1:] + bins[:-1])
         h, _ = np.histogram(np.hstack(spikes), bins=bins)
 
         h = h.astype(np.float64)
-        f_max = h.max()/db/len(spikes)
+        f_max = h.max() / db / len(spikes)
 
         h *= repeats / h.max() / 2
         ax.bar(bin_centers, h, align='center', width=db, color='lightgray', zorder=-20, lw=0, label='PSTH')
-        ax.plot(bin_centers[0] * np.ones(2), [repeats//8, h.max() * 150/f_max + repeats//8], '-', color='darkslategray',
+        ax.plot(bin_centers[0] * np.ones(2), [repeats // 8, h.max() * 150 / f_max + repeats // 8], '-',
+                color='darkslategray',
                 lw=3, solid_capstyle='butt')
-        ax.text(bin_centers[0]+db/4, repeats/6, '150 Hz')
-        for y, sp in zip(count(start=repeats//2+1), spikes[:min(repeats, len(spikes))]):
-            ax.vlines(sp, 0 * sp + y, 0 * sp + y+1,'k', rasterized=False, label='spikes' if y == repeats//2 + 1 else None)
+        ax.text(bin_centers[0] + db / 4, repeats / 6, '150 Hz')
+        for y, sp in zip(count(start=repeats // 2 + 1), spikes[:min(repeats, len(spikes))]):
+            ax.vlines(sp, 0 * sp + y, 0 * sp + y + 1, 'k', rasterized=False,
+                      label='spikes' if y == repeats // 2 + 1 else None)
             # ax.plot(sp, 0 * sp + y, '.k', mfc='k', ms=2, zorder=-10, rasterized=False)
         y += 1
         ax.set_xticks(np.arange(-(cycles // 2) / eod, (cycles // 2 + 1) / eod, 5 / eod))
@@ -409,7 +407,7 @@ class Baseline(dj.Imported):
             t, e = t[fr:to], e[fr:to]
             e = self.clean_signal(e, eod, t[1] - t[0])
 
-            e = (e - e.min()) / (e.max() - e.min()) * repeats/2
+            e = (e - e.min()) / (e.max() - e.min()) * repeats / 2
 
             ax.plot(t, e + y, lw=2, color=colordict['eod'], zorder=-15, label='EOD')
 
@@ -511,3 +509,259 @@ class Baseline(dj.Imported):
 
                     spike_table.insert1(dict(key, times=spi_d, repeat=spi_m['index']), replace=True)
 
+
+@schema
+class BaseRate(dj.Imported):
+    definition = """
+        # table holding baseline rate with EOD
+        ->Cells
+        ---
+        eod                     : float # eod rate at trial in Hz
+        eod_period              : float # eod period in ms
+        firing_rate             : float # firing rate of the cell
+        time                    : longblob # sampling bins in ms
+        eod_rate                : longblob # instantaneous rate
+        eod_ampl                : longblob # corresponding EOD amplitude
+        min_idx                 : longblob # index into minima of eod amplitude
+        max_idx                 : longblob # index into maxima of eod amplitude
+        """
+
+    def _make_tuples(self, key):
+        print('Populating', key)
+        basedir = BASEDIR + key['cell_id']
+        filename = basedir + '/baserate1.dat'
+        if os.path.isfile(filename):
+            rate = TraceFile(filename)
+        else:
+            print('No such file', filename, 'skipping. ')
+            return
+        info, _, data = [e[0] for e in rate.selectall()]
+
+        key['eod'] = float(info['EOD rate'][:-2])
+        key['eod_period'] = float(info['EOD period'][:-2])
+        key['firing_rate'] = float(info['firing frequency1'][:-2])
+        key['time'], key['eod_rate'], key['eod_ampl'] = data.T
+        _, key['max_idx'], _, key['min_idx'] = peakdet(data[:, 2])
+        self.insert1(key)
+
+    def plot(self, ax, ax2, find_range=True):
+        t, rate, ampl, mi, ma = self.fetch1['time', 'eod_rate', 'eod_ampl', 'min_idx', 'max_idx']
+        n = len(t)
+        if find_range:
+            if len(mi) < 2:
+                if mi[0] < n // 2:
+                    mi = np.hstack((mi, [n]))
+                else:
+                    mi = np.hstack(([0], mi + 1))
+
+            idx = slice(*mi)
+        else:
+            idx = slice(None)
+        dt = t[1] - t[0]
+        t = t - t[mi[0]]
+        ax2.plot(t[idx], ampl[idx], color=colordict['eod'], label='EOD', zorder=10, lw=2)
+        ax.bar(t[idx], rate[idx], color='lightgray', lw=0, width=dt, align='center', label='PSTH', zorder=-10)
+        # ax.set_ylabel('firing rate [Hz]')
+        ax2.set_ylabel('EOD amplitude [mV]')
+        ax.axis('tight')
+        ax2.axis('tight')
+        ax.set_xlabel('time [ms]')
+
+
+@schema
+class Runs(dj.Imported):
+    definition = """
+    # table holding trials
+
+    run_id                     : int # index of the run
+    repro="SAM"                : enum('SAM', 'Filestimulus')
+    ->Cells                    # which cell the trial belongs to
+
+    ---
+
+    delta_f                 : float # delta f of the trial in Hz
+    contrast                : float  # contrast of the trial
+    eod                     : float # eod rate at trial in Hz
+    duration                : float # duration in s
+    am                      : int   # whether AM was used
+    samplingrate            : float # sampling rate in Hz
+    n_harmonics             : int # number of harmonics in the stimulus
+    """
+
+    class SpikeTimes(dj.Part):
+        definition = """
+        # table holding spike time of trials
+
+        -> Runs
+        trial_id                   : int # index of the trial within run
+
+        ---
+
+        times                      : longblob # spikes times in ms
+        """
+
+    class GlobalEFieldPeaksTroughs(dj.Part, dj.Manual):
+        definition = """
+        # table holding global efield trace
+
+        -> Runs
+        trial_id                   : int # index of the trial within run
+        ---
+
+        peaks               : longblob # peak indices
+        troughs             : longblob # trough indices
+        """
+
+    class LocalEODPeaksTroughs(dj.Part, dj.Manual):
+        definition = """
+        # table holding local EOD traces
+
+        -> Runs
+        trial_id                   : int # index of the trial within run
+        ---
+
+        peaks               : longblob # peak indices
+        troughs             : longblob # trough indices
+        """
+
+    class GlobalEOD(dj.Part, dj.Manual):
+        definition = """
+        # table holding global EOD traces
+
+        -> Runs
+        trial_id                   : int # index of the trial within run
+        ---
+
+        global_voltage                      : longblob # spikes times
+        """
+
+    # class VoltageTraces(dj.Part, dj.Manual):
+    #     definition = """
+    #     # table holding voltage traces
+    #
+    #     -> Runs
+    #     trial_id                   : int # index of the trial within run
+    #     ---
+    #
+    #     membrane_potential                      : longblob # spikes times
+    #     """
+
+    def load_spikes(self):
+        """
+        Loads all spikes referring to that relation.
+
+        :return: trial ids and spike times in s
+        """
+        spike_times, trial_ids = (Runs.SpikeTimes() & self).fetch['times', 'trial_id']
+        spike_times = [s / 1000 for s in spike_times]  # convert to s
+        return trial_ids, spike_times
+
+    def _make_tuples(self, key):
+        repro = 'SAM'
+        basedir = BASEDIR + key['cell_id']
+        spikefile = basedir + '/samallspikes1.dat'
+        if os.path.isfile(spikefile):
+            stimuli = load(basedir + '/stimuli.dat')
+            traces = load_traces(basedir, stimuli)
+            spikes = load(spikefile)
+            spi_meta, spi_key, spi_data = spikes.selectall()
+
+            globalefield = Runs.GlobalEFieldPeaksTroughs()
+            localeod = Runs.LocalEODPeaksTroughs()
+            globaleod = Runs.GlobalEOD()
+            spike_table = Runs.SpikeTimes()
+            # v1trace = Runs.VoltageTraces()
+
+            for run_idx, (spi_d, spi_m) in enumerate(zip(spi_data, spi_meta)):
+                print("\t%s run %i" % (repro, run_idx))
+
+                # match index from stimspikes with run from stimuli.dat
+                stim_m, stim_k, stim_d = stimuli.subkey_select(RePro=repro, Run=spi_m['index'])
+
+                if len(stim_m) > 1:
+                    raise KeyError('%s and index are not unique to identify stimuli.dat block.' % (repro,))
+                else:
+                    stim_k = stim_k[0]
+                    stim_m = stim_m[0]
+                    signal_column = \
+                        [i for i, k in enumerate(stim_k) if k[:4] == ('stimulus', 'GlobalEField', 'signal', '-')][0]
+
+                    valid = []
+
+                    if stim_d == [[[0]]]:
+                        print("\t\tEmpty stimuli data! Continuing ...")
+                        continue
+
+                    for d in stim_d[0]:
+                        if not d[signal_column].startswith('FileStimulus-value'):
+                            valid.append(d)
+                        else:
+                            print("\t\tExcluding a reset trial from stimuli.dat")
+                    stim_d = valid
+
+                if len(stim_d) != len(spi_d):
+                    print(
+                        """\t\t%s index %i has %i trials, but stimuli.dat has %i. Trial was probably aborted. Not including data.""" % (
+                            spikefile, spi_m['index'], len(spi_d), len(stim_d)))
+                    continue
+
+                start_index, index = [(i, k[-1]) for i, k in enumerate(stim_k) if 'traces' in k and 'V-1' in k][0]
+                sample_interval, time_unit = get_number_and_unit(
+                    stim_m['analog input traces']['sample interval%i' % (index,)])
+
+                # make sure that everything was sampled with the same interval
+                sis = []
+                for jj in range(1, 5):
+                    si, tu = get_number_and_unit(stim_m['analog input traces']['sample interval%i' % (jj,)])
+                    assert tu == 'ms', 'Time unit is not ms anymore!'
+                    sis.append(si)
+                assert len(np.unique(sis)) == 1, 'Different sampling intervals!'
+
+                duration = ureg.parse_expression(spi_m['Settings']['Stimulus']['duration']).to(time_unit).magnitude
+
+                if 'ampl' in spi_m['Settings']['Stimulus']:
+                    nharmonics = len(list(map(float, spi_m['Settings']['Stimulus']['ampl'].strip().split(','))))
+                else:
+                    nharmonics = 0
+
+                start_idx, stop_idx = [], []
+                # start_times, stop_times = [], []
+
+                start_indices = [d[start_index] for d in stim_d]
+                for begin_index, trial in zip(start_indices, spi_d):
+                    # start_times.append(begin_index*sample_interval)
+                    # stop_times.append(begin_index*sample_interval + duration)
+                    start_idx.append(begin_index)
+                    stop_idx.append(begin_index + duration / sample_interval)
+
+                to_insert = dict(key)
+                to_insert['run_id'] = spi_m['index']
+                to_insert['delta_f'] = float(spi_m['Settings']['Stimulus']['deltaf'][:-2])
+                to_insert['contrast'] = float(spi_m['Settings']['Stimulus']['contrast'][:-1])
+                to_insert['eod'] = float(spi_m['EOD rate'][:-2])
+                to_insert['duration'] = duration / 1000 if time_unit == 'ms' else duration
+                to_insert['am'] = spi_m['Settings']['Stimulus']['am'] * 1
+                to_insert['samplingrate'] = 1 / sample_interval * 1000 if time_unit == 'ms' else 1 / sample_interval
+                to_insert['n_harmonics'] = nharmonics
+                to_insert['repro'] = 'SAM'
+
+                self.insert1(to_insert)
+                for trial_idx, (start, stop) in enumerate(zip(start_idx, stop_idx)):
+                    tmp = dict(run_id=run_idx, trial_id=trial_idx, repro='SAM', **key)
+                    # tmp['membrane_potential'] = traces['V-1']['data'][start:stop]
+                    # # v1trace.insert1(tmp, replace=True)
+                    # del tmp['membrane_potential']
+
+                    global_efield = traces['GlobalEFie']['data'][start:stop]
+                    _, peaks, _, troughs = peakdet(global_efield)
+                    globalefield.insert1(dict(tmp, peaks=peaks, troughs=troughs), ignore_extra_fields=True)
+
+                    local_efield = traces['LocalEOD-1']['data'][start:stop]
+                    _, peaks, _, troughs = peakdet(local_efield)
+                    localeod.insert1(dict(tmp, peaks=peaks, troughs=troughs), ignore_extra_fields=True)
+
+                    tmp['global_voltage'] = traces['EOD']['data'][start:stop]
+                    globaleod.insert1(tmp, ignore_extra_fields=True)
+
+                    tmp['times'] = spi_d[trial_idx]
+                    spike_table.insert1(tmp, ignore_extra_fields=True)
