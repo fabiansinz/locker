@@ -124,92 +124,92 @@ class EODFit(dj.Computed):
             fig.savefig(outdir + '/{fish_id}.png'.format(**key))
             plt.close(fig)
 
-#
-# @schema
-# class LIFPUnit(dj.Computed):
-#     definition = """
-#     # parameters for a LIF P-Unit simulation
-#
-#     id           : varchar(100) # non-double unique identifier
-#     ->EODFit
-#     ---
-#     zeta            : double
-#     resonant_freq   : double    # resonant frequency of the osciallator in Hz
-#     tau             : double
-#     gain            : double
-#     offset          : double
-#     noise_sd        : double
-#     threshold       : double
-#     reset           : double
-#     lif_tau         : double
-#     """
-#
-#     def _make_tuples(self, key):
-#         eod = (EODFit() & key).fetch1['fundamental']
-#         self.insert1(dict(key, id='nwgimproved',
-#                           zeta=0.2,
-#                           tau=0.002,
-#                           resonant_freq=eod,
-#                           gain=70,
-#                           offset=9,
-#                           noise_sd=30,
-#                           threshold=14.,
-#                           reset=0.,
-#                           lif_tau=0.001
-#                           ))
-#
-#     def simulate(self, key, n, t, stimulus, y0=None):
-#         """
-#         Samples spikes from leaky integrate and fire neuron with id==settings_name and time t.
-#         Returns n trials
-#
-#         :param key: key that uniquely identifies a setting
-#         :param n: number of trials
-#         :param t: time array
-#         :param stimulus: stimulus as a function of time (function handle)
-#         :return: spike times
-#         """
-#
-#         # --- get parameters from database
-#         zeta, tau, gain, wr, lif_tau, offset, threshold, reset, noisesd = (self & key).fetch1[
-#             'zeta', 'tau', 'gain', 'resonant_freq', 'lif_tau', 'offset', 'threshold', 'reset', 'noise_sd']
-#         wr *= 2 * np.pi
-#         w0 = wr / np.sqrt(1 - 2 * zeta ** 2)
-#         Zm = np.sqrt((2 * w0 * zeta) ** 2 + (wr ** 2 - w0 ** 2) ** 2 / wr ** 2)
-#         alpha = wr * Zm
-#
-#         # --- set initial values if not given
-#         if y0 is None:
-#             y0 = np.zeros(3)
-#
-#         # --- differential equations for resonantor
-#         def _d(y, t):
-#             return np.array([
-#                 y[1],
-#                 stimulus(t) - 2 * zeta * w0 * y[1] - w0 ** 2 * y[0],
-#                 (-y[2] + gain * alpha * max(y[0], 0)) / tau
-#             ])
-#
-#         # --- simulate LIF
-#         dt = t[1] - t[0]
-#
-#         Vin = odeint(lambda y, tt: _d(y, tt), y0, t).T[2]
-#         Vin -= offset
-#
-#         Vout = np.zeros(n)
-#
-#         ret = [list() for _ in range(n)]
-#
-#         sdB = np.sqrt(dt) * noisesd
-#
-#         for i, T in enumerate(t):
-#             Vout += (-Vout + Vin[i]) * dt / lif_tau + np.random.randn(n) * sdB
-#             idx = Vout > threshold
-#             for j in np.where(idx)[0]:
-#                 ret[j].append(T)
-#             Vout[idx] = reset
-#
-#         return tuple(np.asarray(e) for e in ret), Vin
+
+@schema
+class LIFPUnit(dj.Computed):
+    definition = """
+    # parameters for a LIF P-Unit simulation
+
+    id           : varchar(100) # non-double unique identifier
+    ->EODFit
+    ---
+    zeta            : double
+    resonant_freq   : double    # resonant frequency of the osciallator in Hz
+    tau             : double
+    gain            : double
+    offset          : double
+    noise_sd        : double
+    threshold       : double
+    reset           : double
+    lif_tau         : double
+    """
+
+    def _make_tuples(self, key):
+        eod = (EODFit() & key).fetch1('fundamental')
+        self.insert1(dict(key, id='nwgimproved',
+                          zeta=0.2,
+                          tau=0.002,
+                          resonant_freq=eod,
+                          gain=70,
+                          offset=9,
+                          noise_sd=30,
+                          threshold=14.,
+                          reset=0.,
+                          lif_tau=0.001
+                          ))
+
+    def simulate(self, key, n, t, stimulus, y0=None):
+        """
+        Samples spikes from leaky integrate and fire neuron with id==settings_name and time t.
+        Returns n trials
+
+        :param key: key that uniquely identifies a setting
+        :param n: number of trials
+        :param t: time array
+        :param stimulus: stimulus as a function of time (function handle)
+        :return: spike times
+        """
+
+        # --- get parameters from database
+        zeta, tau, gain, wr, lif_tau, offset, threshold, reset, noisesd = (self & key).fetch1(
+            'zeta', 'tau', 'gain', 'resonant_freq', 'lif_tau', 'offset', 'threshold', 'reset', 'noise_sd')
+        wr *= 2 * np.pi
+        w0 = wr / np.sqrt(1 - 2 * zeta ** 2)
+        Zm = np.sqrt((2 * w0 * zeta) ** 2 + (wr ** 2 - w0 ** 2) ** 2 / wr ** 2)
+        alpha = wr * Zm
+
+        # --- set initial values if not given
+        if y0 is None:
+            y0 = np.zeros(3)
+
+        # --- differential equations for resonantor
+        def _d(y, t):
+            return np.array([
+                y[1],
+                stimulus(t) - 2 * zeta * w0 * y[1] - w0 ** 2 * y[0],
+                (-y[2] + gain * alpha * max(y[0], 0)) / tau
+            ])
+
+        # --- simulate LIF
+        dt = t[1] - t[0]
+
+        Vin = odeint(lambda y, tt: _d(y, tt), y0, t).T[2]
+        Vin -= offset
+
+        Vout = np.zeros(n)
+
+        ret = [list() for _ in range(n)]
+
+        sdB = np.sqrt(dt) * noisesd
+
+        for i, T in enumerate(t):
+            Vout += (-Vout + Vin[i]) * dt / lif_tau + np.random.randn(n) * sdB
+            idx = Vout > threshold
+            for j in np.where(idx)[0]:
+                ret[j].append(T)
+            Vout[idx] = reset
+
+        return tuple(np.asarray(e) for e in ret), Vin
 #
 # @schema
 # class HarmonicStimulation(dj.Lookup):
