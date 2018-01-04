@@ -17,7 +17,8 @@ RUN pip install h5py jupyter
 
 RUN \
   pip install git+https://github.com/circstat/pycircstat.git && \
-  pip install matplotlib_venn
+  pip install matplotlib_venn && \
+  pip install tqdm
 
 WORKDIR /src
 

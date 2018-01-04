@@ -28,7 +28,6 @@ import pickle
 ureg = UnitRegistry()
 BASEDIR = '/data/'
 schema = dj.schema('efish_data', locals())
-animals = dj.create_virtual_module('census', 'animal_keeping')
 
 
 @schema
@@ -92,7 +91,7 @@ class EFishes(dj.Imported):
     definition = """
     # Basics weakly electric fish subject info
 
-    -> animals.CensusSubject          
+    fish_id                                 : int # fish id in the animals fish database          
     -> PaperCells
     ---
 
@@ -108,6 +107,9 @@ class EFishes(dj.Imported):
         return PaperCells()
 
     def _make_tuples(self, key):
+        # we are not making this a direct dependency because that database is not Datajoint compatible
+        animals = dj.create_virtual_module('census', 'animal_keeping')
+
         a = scan_info(key['cell_id'], basedir=BASEDIR)
         a = a['Subject'] if 'Subject' in a else a['Recording']['Subject']
 
@@ -118,7 +120,7 @@ class EFishes(dj.Imported):
         fish_id = (animals.CensusSubject() & dict(name=a['Identifier'])).fetch1('id')
 
         self.insert1(dict(key,
-                          id=fish_id,
+                          fish_id=fish_id,
                           eod_frequency=float(a['EOD Frequency'][:-2]),
                           gender=a['Gender'].lower(),
                           weight=float(a['Weight'][:-1]),
@@ -150,7 +152,7 @@ class Cells(dj.Imported):
         cl = a['Cell'] if 'Cell' in a else a['Recording']['Cell']
         # fish_id = EFishes() & #subj['Identifier'],
         dat = {'cell_id': key['cell_id'],
-               'id': (EFishes() & key).fetch1('id'),
+               'fish_id': (EFishes() & key).fetch1('fish_id'),
                'recording_date': a['Recording']['Date'],
                'cell_type': cl['CellType'].lower(),
                'recording_location': 'nerve' if cl['Structure'].lower() == 'nerve' else 'ell',
@@ -592,7 +594,7 @@ class Runs(dj.Imported):
         definition = """
         # table holding spike time of trials
 
-        -> Runs
+        -> master
         trial_id                   : int # index of the trial within run
 
         ---
@@ -600,11 +602,11 @@ class Runs(dj.Imported):
         times                      : longblob # spikes times in ms
         """
 
-    class GlobalEFieldPeaksTroughs(dj.Part, dj.Manual):
+    class GlobalEFieldPeaksTroughs(dj.Part):
         definition = """
         # table holding global efield trace
 
-        -> Runs
+        -> master
         trial_id                   : int # index of the trial within run
         ---
 
@@ -612,11 +614,11 @@ class Runs(dj.Imported):
         troughs             : longblob # trough indices
         """
 
-    class LocalEODPeaksTroughs(dj.Part, dj.Manual):
+    class LocalEODPeaksTroughs(dj.Part):
         definition = """
         # table holding local EOD traces
 
-        -> Runs
+        -> master
         trial_id                   : int # index of the trial within run
         ---
 
@@ -624,7 +626,18 @@ class Runs(dj.Imported):
         troughs             : longblob # trough indices
         """
 
-    class GlobalEOD(dj.Part, dj.Manual):
+    class LocalEOD(dj.Part):
+        definition = """
+        # table holding local EOD traces
+
+        -> master
+        trial_id                   : int # index of the trial within run
+        ---
+
+        local_efield             : longblob # peak indices
+        """
+
+    class GlobalEOD(dj.Part):
         definition = """
         # table holding global EOD traces
 
@@ -635,16 +648,17 @@ class Runs(dj.Imported):
         global_voltage                      : longblob # spikes times
         """
 
-    # class VoltageTraces(dj.Part, dj.Manual):
-    #     definition = """
-    #     # table holding voltage traces
-    #
-    #     -> Runs
-    #     trial_id                   : int # index of the trial within run
-    #     ---
-    #
-    #     membrane_potential                      : longblob # spikes times
-    #     """
+
+    class GlobalEODPeaksTroughs(dj.Part):
+        definition = """
+        # table holding global EOD traces
+
+        -> master.GlobalEOD
+        ---
+
+        peaks               : longblob # peak indices
+        troughs             : longblob # trough indices
+        """
 
     def load_spikes(self):
         """
@@ -667,8 +681,10 @@ class Runs(dj.Imported):
             spi_meta, spi_key, spi_data = spikes.selectall()
 
             globalefield = Runs.GlobalEFieldPeaksTroughs()
-            localeod = Runs.LocalEODPeaksTroughs()
+            localeodpeaks = Runs.LocalEODPeaksTroughs()
+            localeod = Runs.LocalEOD()
             globaleod = Runs.GlobalEOD()
+            globaleodpeaks = Runs.GlobalEODPeaksTroughs()
             spike_table = Runs.SpikeTimes()
             # v1trace = Runs.VoltageTraces()
 
@@ -753,15 +769,27 @@ class Runs(dj.Imported):
                     # del tmp['membrane_potential']
 
                     global_efield = traces['GlobalEFie']['data'][start:stop]
-                    _, peaks, _, troughs = peakdet(global_efield)
+                    _, peaks, _, troughs = peakdet(global_efield.astype(np.float32))
                     globalefield.insert1(dict(tmp, peaks=peaks, troughs=troughs), ignore_extra_fields=True)
 
                     local_efield = traces['LocalEOD-1']['data'][start:stop]
                     _, peaks, _, troughs = peakdet(local_efield)
-                    localeod.insert1(dict(tmp, peaks=peaks, troughs=troughs), ignore_extra_fields=True)
+                    localeod.insert1(dict(tmp, local_efield=local_efield.astype(np.float32)), ignore_extra_fields=True)
+                    localeodpeaks.insert1(dict(tmp, peaks=peaks, troughs=troughs), ignore_extra_fields=True)
 
-                    tmp['global_voltage'] = traces['EOD']['data'][start:stop]
-                    globaleod.insert1(tmp, ignore_extra_fields=True)
+                    global_voltage = traces['EOD']['data'][start:stop]
+                    globaleod.insert1(dict(tmp, global_voltage=global_voltage.astype(np.float32)), ignore_extra_fields=True)
+                    _, peaks, _, troughs = peakdet(global_voltage)
+                    globaleodpeaks.insert1(dict(tmp, peaks=peaks, troughs=troughs),
+                                           ignore_extra_fields=True)
+
 
                     tmp['times'] = spi_d[trial_idx]
                     spike_table.insert1(tmp, ignore_extra_fields=True)
+
+    def post_fill(self):
+        for k in self.GlobalEOD().fetch.keys():
+            global_voltage = (self.GlobalEOD() & k).fetch1('global_voltage')
+            print(k, flush=True)
+            _, peaks, _, troughs = peakdet(global_voltage)
+            Runs.GlobalEODPeaksTroughs().insert1(dict(k, peaks=peaks, troughs=troughs))
