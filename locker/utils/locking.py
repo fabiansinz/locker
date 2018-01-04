@@ -3,7 +3,6 @@ import itertools
 import numpy as np
 from scipy import optimize, stats, signal
 
-
 import pycircstat as circ
 
 from .data import peakdet
@@ -124,3 +123,10 @@ def find_significant_peaks(spikes, w, spectrum, peak_dict, threshold, tol=3.,
                 tmp['refined'] = 1
                 ret.append(tmp)
     return ret
+
+
+def vector_strength_at(f, trial, alpha=None):
+    if alpha is None:
+        return 1 - circ.var((trial % (1. / f)) * f * 2 * np.pi)
+    else:
+        return 1 - circ.var((trial % (1. / f)) * f * 2 * np.pi), np.sqrt(- np.log(alpha) / len(trial))

@@ -6,7 +6,7 @@ from tqdm import tqdm
 from pycircstat import event_series as es
 import pycircstat as circ
 from .utils.data import peakdet
-from .utils.locking import find_significant_peaks
+from .utils.locking import find_significant_peaks, find_best_locking, vector_strength_at
 from . import colordict
 import numpy as np
 import pandas as pd
@@ -20,12 +20,12 @@ from .data import Runs, Cells, BaseEOD, Baseline
 
 schema = dj.schema('efish_analysis', locals())
 
+
 class PlotableSpectrum:
     def plot(self, ax, restrictions, f_max=2000, ncol=None):
         sns.set_context('paper')
         # colors = ['#1b9e77', '#d95f02', '#7570b3', '#e7298a']
         # colors = ['deeppink', 'dodgerblue', sns.xkcd_rgb['mustard'], sns.xkcd_rgb['steel grey']]
-
 
         markers = [(4, 0, 90), '^', 'D', 's', 'o']
         stim, eod, baseline, beat = sympy.symbols('f_s, EODf, f_b, \Delta')
@@ -105,7 +105,8 @@ class PlotableSpectrum:
                                 linestyle='None')
                     elif cs == 0 and ce == 0 and cb != 0:
                         ax.plot(freq, vs, 'k', mfc=colordict['baseline'],
-                                label='baseline firing = {:.0f} Hz'.format(freq) if cb == 1 else None, marker=markers[2],
+                                label='baseline firing = {:.0f} Hz'.format(freq) if cb == 1 else None,
+                                marker=markers[2],
                                 linestyle='None')
                     elif cs == 1 and ce == -1 and cb == 0:
                         ax.plot(freq, vs, 'k', mfc=colordict['delta_f'],
@@ -127,7 +128,6 @@ class PlotableSpectrum:
             by_label = OrderedDict(sorted(zip(labels, handles), key=label_order))
             ax.legend(by_label.values(), by_label.keys(), bbox_to_anchor=(1, 1.3),
                       ncol=len(by_label) if ncol is None else ncol)
-
 
 
 @schema
@@ -226,6 +226,7 @@ class TrialAlign(dj.Computed):
             ax.plot(t - t0, geod[:n], '-', color='dodgerblue', lw=.1)
             ax.plot(t - t0, gef[:n], '-', color='k', lw=.1)
 
+
 @schema
 class FirstOrderSpikeSpectra(dj.Computed, PlotableSpectrum):
     definition = """
@@ -276,6 +277,7 @@ class FirstOrderSpikeSpectra(dj.Computed, PlotableSpectrum):
         vs[np.isnan(vs)] = 0
         self.insert1(key)
 
+
 @schema
 class FirstOrderSignificantPeaks(dj.Computed):
     definition = """
@@ -316,7 +318,6 @@ class FirstOrderSignificantPeaks(dj.Computed):
                 s['refined'] = double_peaks
                 self.insert1(s)
                 double_peaks -= 1
-
 
 
 @schema
@@ -363,9 +364,9 @@ class SecondOrderSpikeSpectra(dj.Computed, PlotableSpectrum):
             r = np.linspace(0, 2, 10000)
             dr = r[1] - r[0]
             mu = np.sum(2 * poiss_rate * r ** 2 * np.exp(poiss_rate * np.exp(-r ** 2) - poiss_rate - r ** 2) / (
-                1 - np.exp(-poiss_rate))) * dr
+                    1 - np.exp(-poiss_rate))) * dr
             s = np.sum(2 * poiss_rate * r ** 3 * np.exp(poiss_rate * np.exp(-r ** 2) - poiss_rate - r ** 2) / (
-                1 - np.exp(-poiss_rate))) * dr
+                    1 - np.exp(-poiss_rate))) * dr
             s2 = np.sqrt(s - mu ** 2.)
             y = stats.norm.ppf(1 - alpha, loc=mu,
                                scale=s2 / np.sqrt(len(spikes_per_trial)))  # use central limit theorem
@@ -420,7 +421,6 @@ class SecondOrderSignificantPeaks(dj.Computed):
         run = (Runs() & key).fetch1()
         cell = (Cells() & key).fetch1()
 
-
         st = (Runs.SpikeTimes() & key).fetch(as_dict=True)
         spikes = [s['times'] / 1000 for s in st]  # convert to s
 
@@ -434,7 +434,7 @@ class SecondOrderSignificantPeaks(dj.Computed):
 
             try:
                 self.insert1(s)
-            except dj.DataJointError: # sometimes one peak has two peaks nearby
+            except dj.DataJointError:  # sometimes one peak has two peaks nearby
                 print("Found double peak")
                 s['refined'] = double_peaks
                 self.insert1(s)
@@ -452,6 +452,7 @@ class SamplingPointsPerBin(dj.Lookup):
     """
 
     contents = [(2,), (4,), (8,)]
+
 
 @schema
 class PhaseLockingHistogram(dj.Computed):
@@ -539,6 +540,7 @@ class PhaseLockingHistogram(dj.Computed):
         sns.violinplot(data=df, y='delta_f', x='spikes', hue='type', split=True, ax=ax, hue_order=['EOD', 'stimulus'],
                        order=delta_fs, palette=palette, cut=0, inner=None, linewidth=.5,
                        orient='h', bw=.05)
+
 
 @schema
 class EODStimulusPSTSpikes(dj.Computed):
@@ -655,7 +657,7 @@ class EODStimulusPSTSpikes(dj.Computed):
                 dy = 0.15 * (y[-1] - y[0])
                 e = (e - e.min()) / (e.max() - e.min()) * dy
                 ax.plot(t, e + y[-1], lw=2, color='steelblue', zorder=-15, label='EOD')
-                y.append(y[-1] + 1.2*dy)
+                y.append(y[-1] + 1.2 * dy)
 
             y = np.asarray(y)
             ax.set_xlim((-whs, whs))
@@ -725,3 +727,133 @@ class EODStimulusPSTSpikes(dj.Computed):
             # ax.set_yticklabels(['%.0f' % yt for yt in yticks])
             ax.set_ylim((0, 2.4 * repeats))
 
+
+@schema
+class Decoding(dj.Computed):
+    definition = """
+    # locking by decoding time
+
+    -> Runs
+    ---
+    beat                    : float    # refined beat frequency
+    stimulus                : float    # refined stimulus frequency
+    """
+
+    class Beat(dj.Part):
+        definition = """
+        -> Decoding
+        -> Runs.SpikeTimes
+        ---
+        crit_beat=null               : float # critical value for beat locking
+        vs_beat=null                 : float # vector strength for full trial
+        """
+
+    class Stimulus(dj.Part):
+        definition = """
+        -> Decoding
+        -> Runs.SpikeTimes
+        ---
+        crit_stimulus=null           : float # critical value for stimulus locking
+        vs_stimulus=null             : float # vector strength for full trial
+        """
+
+    @property
+    def key_source(self):
+        return Runs() * Cells() & dict(cell_type='p-unit')
+
+    def _make_tuples(self, key):
+        print('Processing', key['cell_id'], 'run', key['run_id'], )
+        dat = (Runs() & key).fetch(as_dict=True)[0]
+
+        spike_times, trial_ids = (Runs.SpikeTimes() & key).fetch('times', 'trial_id')
+        spike_times = [s / 1000 for s in spike_times]  # convert to s
+
+        # refine delta f locking on all spikes
+        delta_f = find_best_locking(spike_times, [dat['delta_f']], tol=3)[0][0]
+        stimulus_frequency = find_best_locking(spike_times, [dat['delta_f'] + dat['eod']], tol=3)[0][0]
+
+        self.insert1(dict(key, beat=delta_f, stimulus=stimulus_frequency))
+        stim = self.Stimulus()
+        beat = self.Beat()
+        for key['trial_id'], trial in zip(trial_ids, spike_times):
+            v, c = vector_strength_at(stimulus_frequency, trial, alpha=0.001)
+            if np.isinf(c):
+                c = np.NaN
+            stim.insert1(dict(key, vs_stimulus=v, crit_stimulus=c))
+            v, c = vector_strength_at(delta_f, trial, alpha=0.001)
+            if np.isinf(c):
+                c = np.NaN
+            beat.insert1(dict(key, vs_beat=v, crit_beat=c))
+
+
+@schema
+class BaselineSpikeJitter(dj.Computed):
+    definition = """
+    # circular variance and mean of spike times within an EOD period
+
+    -> Baseline
+
+    ---
+
+    base_var         : double # circular variance
+    base_std         : double # circular std
+    base_mean        : double # circular mean
+    """
+
+    @property
+    def key_source(self):
+        return Baseline() & Baseline.LocalEODPeaksTroughs() & dict(cell_type='p-unit')
+
+    def _make_tuples(self, key):
+        print('Processing', key['cell_id'])
+        sampling_rate, eod = (Baseline() & key).fetch1('samplingrate', 'eod')
+        dt = 1. / sampling_rate
+
+        trials = Baseline.LocalEODPeaksTroughs() * Baseline.SpikeTimes() & key
+
+        aggregated_spikes = np.hstack([s / 1000 - p[0] * dt for s, p in zip(*trials.fetch('times', 'peaks'))])
+
+        aggregated_spikes %= 1 / eod
+
+        aggregated_spikes *= eod * 2 * np.pi  # normalize to 2*pi
+        key['base_var'], key['base_mean'], key['base_std'] = \
+            circ.var(aggregated_spikes), circ.mean(aggregated_spikes), circ.std(aggregated_spikes)
+        self.insert1(key)
+
+
+@schema
+class StimulusSpikeJitter(dj.Computed):
+    definition = """
+    # circular variance and std of spike times within an EOD period during stimulation
+
+    -> Runs
+
+    ---
+    stim_var         : double # circular variance
+    stim_std         : double # circular std
+    stim_mean        : double # circular mean
+    """
+
+    @property
+    def key_source(self):
+        return Runs() & TrialAlign()
+
+    def _make_tuples(self, key):
+        print('Processing', key['cell_id'], 'run', key['run_id'])
+        if SecondOrderSignificantPeaks() & dict(key, eod_coeff=1, stimulus_coeff=0, baseline_coeff=0, refined=1):
+            eod, vs = (SecondOrderSignificantPeaks() & dict(key, eod_coeff=1, stimulus_coeff=0, baseline_coeff=0,
+                                                            refined=1)).fetch1('frequency', 'vector_strength')
+        elif SecondOrderSignificantPeaks() & dict(key, eod_coeff=1, stimulus_coeff=0, baseline_coeff=0, refined=0):
+            eod, vs = (SecondOrderSignificantPeaks() & dict(key, eod_coeff=1, stimulus_coeff=0, baseline_coeff=0,
+                                                            refined=0)).fetch1('frequency', 'vector_strength')
+        else:
+            eod = (Runs() & key).fetch1('eod')
+
+        aggregated_spikes = np.hstack(TrialAlign().load_trials(key))
+        aggregated_spikes %= 1 / eod
+
+        aggregated_spikes *= eod * 2 * np.pi  # normalize to 2*pi
+        if len(aggregated_spikes) > 1:
+            key['stim_var'], key['stim_mean'], key['stim_std'] = \
+                circ.var(aggregated_spikes), circ.mean(aggregated_spikes), circ.std(aggregated_spikes)
+            self.insert1(key)

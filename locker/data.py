@@ -142,10 +142,6 @@ class Cells(dj.Imported):
     baseline                         : float    # baseline firing rate in Hz
     """
 
-    @property
-    def key_source(self):
-        return PaperCells() & dict(locking_experiment=1)
-
     def _make_tuples(self, key):
         a = scan_info(key['cell_id'], basedir=BASEDIR)
         subj = a['Subject'] if 'Subject' in a else a['Recording']['Subject']
