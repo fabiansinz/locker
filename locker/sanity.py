@@ -1,3 +1,5 @@
+from pprint import pformat
+
 from pandas import DataFrame
 
 import datajoint as dj
@@ -31,8 +33,7 @@ class SpikeCheck(dj.Computed):
 
     def _make_tuples(self, key):
         print('Processing', key)
-        st, keys = (Runs() * Runs.SpikeTimes() & key).fetch['times', dj.key]
-
+        st, keys = (Runs() * Runs.SpikeTimes() & key).fetch('times', dj.key)
         key['all_zeros'] = 1 * np.all(np.abs(np.hstack(st)) < 1e-12)
         self.insert1(key)
         sc = self.SpikeCount()
@@ -67,7 +68,7 @@ class PeakTroughCheck(dj.Computed):
     class SingleEFieldFrequencies(dj.Part):
         definition = """
         -> master
-        -> GlobalEFieldPeaksTroughs
+        -> Runs.GlobalEFieldPeaksTroughs
         ---
         freq_peak                    : double
         freq_trough                    : double
@@ -78,16 +79,16 @@ class PeakTroughCheck(dj.Computed):
         return Runs() & dict(am=0, n_harmonics=0)
 
     def _make_tuples(self, key):
-        dat_eod = (Runs() * LocalEODPeaksTroughs() & key).fetch()
+        print('Populating', pformat(key), flush=True)
+        dat_eod = (Runs() * Runs.LocalEODPeaksTroughs() & key).fetch()
 
         eod_peaks = dat_eod['samplingrate'] / np.array([np.diff(e).mean() for e in dat_eod['peaks']])
         eod_troughs = dat_eod['samplingrate'] / np.array([np.diff(e).mean() for e in dat_eod['troughs']])
 
-        dat_efield = (Runs() * GlobalEFieldPeaksTroughs() & key).fetch()
+        dat_efield = (Runs() * Runs.GlobalEFieldPeaksTroughs() & key).fetch()
         efield_peaks = dat_efield['samplingrate'] / np.array([np.diff(e).mean() for e in dat_efield['peaks']])
         efield_troughs = dat_efield['samplingrate'] / np.array([np.diff(e).mean() for e in dat_efield['troughs']])
 
-        key_sub = dict(key)
         key['eod_frequency_peak'] = eod_peaks.mean()
         key['eod_frequency_trough'] = eod_troughs.mean()
         key['stimulus_frequency_peak'] = efield_peaks.mean()
@@ -95,7 +96,6 @@ class PeakTroughCheck(dj.Computed):
 
         self.insert1(key)
 
-        n = len(dat_eod)
         PeakTroughCheck.SingleEODFrequencies().insert(zip(
             dat_eod['run_id'],
             dat_eod['repro'],
@@ -105,7 +105,6 @@ class PeakTroughCheck(dj.Computed):
             eod_troughs
         ))
 
-        n = len(dat_efield)
         PeakTroughCheck.SingleEFieldFrequencies().insert(zip(
             dat_efield['run_id'],
             dat_efield['repro'],
@@ -194,7 +193,7 @@ class PeakTroughCheck(dj.Computed):
 class PowerParameters(dj.Lookup):
     definition = """
     # power analysis parameters
-    
+
     power_param_id      : tinyint
     ---
     poisson_rate        : float # rate of poisson to sample number of neurons
