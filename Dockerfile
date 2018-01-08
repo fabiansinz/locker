@@ -8,7 +8,7 @@ RUN \
   apt-get install -y -q \
     build-essential && \
   apt-get update && \
-  apt-get install -y git
+  apt-get install -y git graphviz
 
 
 # install HDF5 reader and rabbit-mq client lib

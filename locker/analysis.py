@@ -30,7 +30,7 @@ class PlotableSpectrum:
         markers = [(4, 0, 90), '^', 'D', 's', 'o']
         stim, eod, baseline, beat = sympy.symbols('f_s, EODf, f_b, \Delta')
 
-        for fos in ((self * Runs()).proj() & restrictions).fetch.as_dict:
+        for fos in ((self * Runs()).proj() & restrictions).fetch(as_dict=True):
             if isinstance(self, FirstOrderSpikeSpectra):
                 peaks = (FirstOrderSignificantPeaks() * restrictions & fos)
             elif isinstance(self, SecondOrderSpikeSpectra):
@@ -41,11 +41,11 @@ class PlotableSpectrum:
             else:
                 raise Exception("Mother class unknown!")
 
-            f, v, alpha, cell, run = (self & fos).fetch1['frequencies', 'vector_strengths', 'critical_value',
-                                                         'cell_id', 'run_id']
+            f, v, alpha, cell, run = (self & fos).fetch1('frequencies', 'vector_strengths', 'critical_value',
+                                                         'cell_id', 'run_id')
 
             # insert refined vector strengths
-            peak_f, peak_v = peaks.fetch['frequency', 'vector_strength']
+            peak_f, peak_v = peaks.fetch('frequency', 'vector_strength')
             f = np.hstack((f, peak_f))
             v = np.hstack((v, peak_v))
             idx = np.argsort(f)
@@ -212,7 +212,7 @@ class TrialAlign(dj.Computed):
         ax.set_xlabel('time [s]')
 
     def plot_traces(self, ax, restriction):
-        sampling_rate = (Runs() & restriction).fetch['samplingrate']
+        sampling_rate = (Runs() & restriction).fetch('samplingrate')
         sampling_rate = np.unique(sampling_rate)
 
         assert len(sampling_rate) == 1, 'Sampling rate must be unique by restriction'
@@ -222,7 +222,7 @@ class TrialAlign(dj.Computed):
 
         t = np.arange(0, 0.01, 1 / sampling_rate)
         n = len(t)
-        for geod, gef, t0 in zip(*trials.fetch['global_efield', 'global_voltage', 't0']):
+        for geod, gef, t0 in zip(*trials.fetch('global_efield', 'global_voltage', 't0')):
             ax.plot(t - t0, geod[:n], '-', color='dodgerblue', lw=.1)
             ax.plot(t - t0, gef[:n], '-', color='k', lw=.1)
 
@@ -491,13 +491,13 @@ class PhaseLockingHistogram(dj.Computed):
 
         if key['eod_coeff'] > 0:
             # convert spikes to s and center on first peak of eod
-            # times, peaks = (Runs.SpikeTimes() * LocalEODPeaksTroughs() & key).fetch['times', 'peaks']
+            # times, peaks = (Runs.SpikeTimes() * LocalEODPeaksTroughs() & key).fetch('times', 'peaks')
             peaks = (Runs.GlobalEODPeaksTroughs() & key).fetch('peaks')
         #
         #     spikes = np.hstack([s / 1000 - p[0] / samplingrate for s, p in zip(times, peaks)])
         else:
             #     # convert spikes to s and center on first peak of stimulus
-            #     times, peaks = (Runs.SpikeTimes() * GlobalEFieldPeaksTroughs() & key).fetch['times', 'peaks']
+            #     times, peaks = (Runs.SpikeTimes() * GlobalEFieldPeaksTroughs() & key).fetch('times', 'peaks')
             peaks = (Runs.GlobalEFieldPeaksTroughs() & key).fetch('peaks')
         # spikes = np.hstack([s / 1000 - p[0] / samplingrate for s, p in zip(times, peaks)])
 
@@ -531,7 +531,7 @@ class PhaseLockingHistogram(dj.Computed):
         if len(runs) == 0:
             return
 
-        df = pd.concat([pd.DataFrame(item) for item in runs.fetch.as_dict()])
+        df = pd.concat([pd.DataFrame(item) for item in runs.fetch(as_dict=True)])
         df.ix[df.stimulus_coeff == 1, 'type'] = 'stimulus'
         df.ix[df.eod_coeff == 1, 'type'] = 'EOD'
         delta_fs = np.unique(runs.fetch('delta_f'))
@@ -574,7 +574,7 @@ class EODStimulusPSTSpikes(dj.Computed):
         runs_eod = Runs() * FirstOrderSignificantPeaks() & dict(key, stimulus_coeff=0, eod_coeff=1)
 
         if len(runs_eod) > 0:
-            # duration = runs_eod.fetch1['duration']
+            # duration = runs_eod.fetch1('duration')
             tol = (CoincidenceTolerance() & key).fetch1('tol')
             eod_period = 1 / runs_eod.fetch1('frequency')
 
@@ -647,7 +647,7 @@ class EODStimulusPSTSpikes(dj.Computed):
                 ax.fill_between(bin_centers, 0 * h + y[-2], h + y[-2], color='silver', zorder=-20)
 
             if BaseEOD() & restrictions:
-                t, e, pe = (BaseEOD() & restrictions).fetch1['time', 'eod_ampl', 'max_idx']
+                t, e, pe = (BaseEOD() & restrictions).fetch1('time', 'eod_ampl', 'max_idx')
                 t = t / 1000
                 pe_t = t[pe]
                 t = t - pe_t[cycles // 2]
@@ -676,7 +676,7 @@ class EODStimulusPSTSpikes(dj.Computed):
 
         rel = self * CoincidenceTolerance() * Runs().proj('delta_f', 'contrast') & restrictions & dict(tol=coincidence)
         df = pd.DataFrame(rel.fetch())
-        samplingrate, eod = (Runs() & restrictions).fetch1['samplingrate', 'eod']
+        samplingrate, eod = (Runs() & restrictions).fetch1('samplingrate', 'eod')
 
         if len(df) > 0:
             whs = df.window_half_size.mean()

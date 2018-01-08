@@ -21,7 +21,7 @@ setup(
     url='https://github.com/fabiansinz/locker',
     keywords='Analysis code for publication',
     packages=find_packages(exclude=['contrib', 'docs', 'tests*']),
-    install_requires=['numpy','matplotlib','seaborn','scipy','statsmodels==0.6.1','sympy==0.7.6.1','Pint==0.6',
+    install_requires=['numpy','matplotlib','seaborn','scipy','statsmodels==0.8.0','sympy==0.7.6.1','Pint==0.6',
                       'PyYAML==3.10','nose==1.3.1'],
     classifiers=[
         'Development Status :: 1 - Beta',

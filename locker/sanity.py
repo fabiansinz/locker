@@ -11,7 +11,7 @@ import pycircstat as circ
 schema = dj.schema('efish_tests', locals())
 import numpy as np
 
-TOL = 3
+TOL = 12 # 1/(eod + tol) - 1/eod = 3/samplingrate # 2 bins of tolerance
 
 
 @schema

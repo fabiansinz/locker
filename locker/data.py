@@ -11,6 +11,7 @@ import datajoint as dj
 import os
 import numpy as np
 
+from .utils.modeling import butter_lowpass_filter
 from . import colordict
 from .utils.data import peakdet
 from .utils.relacs import scan_info, load_traces, get_number_and_unit
@@ -28,6 +29,7 @@ import pickle
 ureg = UnitRegistry()
 BASEDIR = '/data/'
 schema = dj.schema('efish_data', locals())
+LOWPASS_CUTOFF = 2000  # lowpass cutoff for peak detection
 
 
 @schema
@@ -282,8 +284,13 @@ class BaseEOD(dj.Imported):
         key['firing_rate'] = float(info['firing frequency1'][:-2])
 
         key['time'], key['eod_ampl'] = data.T
-
-        _, key['max_idx'], _, key['min_idx'] = peakdet(data[:, 1])
+        sample_freq = 1 / np.median(np.diff(key['time']))
+        if sample_freq > 2 * LOWPASS_CUTOFF:
+            print('\tLowpass filter to 2000Hz')
+            dat = butter_lowpass_filter(data[:, 1], highcut=LOWPASS_CUTOFF, fs=sample_freq, order=5)
+        else:
+            dat = data[:, 1]
+        _, key['max_idx'], _, key['min_idx'] = peakdet(dat)
         self.insert1(key)
 
 
@@ -500,6 +507,12 @@ class Baseline(dj.Imported):
                     if start > 0:
                         tmp = dict(key, repeat=spi_m['index'])
                         leod = traces['LocalEOD-1']['data'][start:stop]
+                        if to_insert['samplingrate'] > 2 * LOWPASS_CUTOFF:
+                            print('\tLowpass filter to', LOWPASS_CUTOFF, 'Hz for peak detection')
+                            leod = butter_lowpass_filter(leod, highcut=LOWPASS_CUTOFF,
+                                                         fs=to_insert['samplingrate'],
+                                                         order=5
+                                                         )
                         _, tmp['peaks'], _, tmp['troughs'] = peakdet(leod)
                         localeod.insert1(tmp, replace=True)
                     else:
@@ -539,7 +552,14 @@ class BaseRate(dj.Imported):
         key['eod_period'] = float(info['EOD period'][:-2])
         key['firing_rate'] = float(info['firing frequency1'][:-2])
         key['time'], key['eod_rate'], key['eod_ampl'] = data.T
-        _, key['max_idx'], _, key['min_idx'] = peakdet(data[:, 2])
+
+        sample_freq = 1 / np.median(np.diff(key['time']))
+        if sample_freq > 2 * LOWPASS_CUTOFF:
+            print('\tLowpass filter to 2000Hz')
+            dat = butter_lowpass_filter(data[:, 2], highcut=LOWPASS_CUTOFF, fs=sample_freq, order=5)
+        else:
+            dat = data[:, 2]
+        _, key['max_idx'], _, key['min_idx'] = peakdet(dat)
         self.insert1(key)
 
     def plot(self, ax, ax2, find_range=True):
@@ -643,7 +663,6 @@ class Runs(dj.Imported):
 
         global_voltage                      : longblob # spikes times
         """
-
 
     class GlobalEODPeaksTroughs(dj.Part):
         definition = """
@@ -754,6 +773,7 @@ class Runs(dj.Imported):
                 to_insert['duration'] = duration / 1000 if time_unit == 'ms' else duration
                 to_insert['am'] = spi_m['Settings']['Stimulus']['am'] * 1
                 to_insert['samplingrate'] = 1 / sample_interval * 1000 if time_unit == 'ms' else 1 / sample_interval
+                fs = to_insert['samplingrate']
                 to_insert['n_harmonics'] = nharmonics
                 to_insert['repro'] = 'SAM'
 
@@ -763,29 +783,42 @@ class Runs(dj.Imported):
                     # tmp['membrane_potential'] = traces['V-1']['data'][start:stop]
                     # # v1trace.insert1(tmp, replace=True)
                     # del tmp['membrane_potential']
-
-                    global_efield = traces['GlobalEFie']['data'][start:stop]
-                    _, peaks, _, troughs = peakdet(global_efield.astype(np.float32))
+                    #---
+                    global_efield = traces['GlobalEFie']['data'][start:stop].astype(np.float32)
+                    if fs > 2 * LOWPASS_CUTOFF:
+                        global_efield = butter_lowpass_filter(global_efield, highcut=LOWPASS_CUTOFF,
+                                                              fs=fs, order=5)
+                    _, peaks, _, troughs = peakdet(global_efield)
                     globalefield.insert1(dict(tmp, peaks=peaks, troughs=troughs), ignore_extra_fields=True)
 
-                    local_efield = traces['LocalEOD-1']['data'][start:stop]
+                    #---
+                    local_efield = traces['LocalEOD-1']['data'][start:stop].astype(np.float32)
+                    localeod.insert1(dict(tmp, local_efield=local_efield), ignore_extra_fields=True)
+                    if fs > 2 * LOWPASS_CUTOFF:
+                        local_efield = butter_lowpass_filter(local_efield, highcut=LOWPASS_CUTOFF,
+                                                              fs=fs, order=5)
                     _, peaks, _, troughs = peakdet(local_efield)
-                    localeod.insert1(dict(tmp, local_efield=local_efield.astype(np.float32)), ignore_extra_fields=True)
                     localeodpeaks.insert1(dict(tmp, peaks=peaks, troughs=troughs), ignore_extra_fields=True)
 
-                    global_voltage = traces['EOD']['data'][start:stop]
-                    globaleod.insert1(dict(tmp, global_voltage=global_voltage.astype(np.float32)), ignore_extra_fields=True)
+                    #---
+                    global_voltage = traces['EOD']['data'][start:stop].astype(np.float32)
+                    globaleod.insert1(dict(tmp, global_voltage=global_voltage),
+                                      ignore_extra_fields=True)
+                    if fs > 2 * LOWPASS_CUTOFF:
+                        global_voltage = butter_lowpass_filter(global_voltage, highcut=LOWPASS_CUTOFF,
+                                                              fs=fs, order=5)
                     _, peaks, _, troughs = peakdet(global_voltage)
                     globaleodpeaks.insert1(dict(tmp, peaks=peaks, troughs=troughs),
                                            ignore_extra_fields=True)
 
-
+                    #---
                     tmp['times'] = spi_d[trial_idx]
                     spike_table.insert1(tmp, ignore_extra_fields=True)
 
-    def post_fill(self):
-        for k in self.GlobalEOD().fetch.keys():
-            global_voltage = (self.GlobalEOD() & k).fetch1('global_voltage')
-            print(k, flush=True)
-            _, peaks, _, troughs = peakdet(global_voltage)
-            Runs.GlobalEODPeaksTroughs().insert1(dict(k, peaks=peaks, troughs=troughs))
+    # def post_fill(self):
+    #
+    #     for k in self.GlobalEOD().fetch.keys():
+    #         global_voltage = (self.GlobalEOD() & k).fetch1('global_voltage')
+    #         print(k, flush=True)
+    #         _, peaks, _, troughs = peakdet(global_voltage)
+    #         Runs.GlobalEODPeaksTroughs().insert1(dict(k, peaks=peaks, troughs=troughs))
