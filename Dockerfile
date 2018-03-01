@@ -13,6 +13,8 @@ RUN \
 
 # install HDF5 reader and rabbit-mq client lib
 RUN pip install h5py jupyter
+RUN pip install jupyterlab && \
+    jupyter serverextension enable --py jupyterlab --sys-prefix
 
 
 RUN \
@@ -46,6 +48,7 @@ ADD ./config/run_jupyter.sh /scripts/
 
 # Add Jupyter Notebook config
 ADD ./config/jupyter_notebook_config.py /root/.jupyter/
+RUN chmod -R a+x /scripts
 
 # By default start running jupyter notebook
 ENTRYPOINT ["/scripts/run_jupyter.sh"]
