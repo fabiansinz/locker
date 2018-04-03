@@ -176,7 +176,7 @@ class TrialAlign(dj.Computed):
 
     @property
     def key_source(self):
-        return Runs() * CoincidenceTolerance() & dict(am=0, n_harmonics=0)
+        return Runs() * CoincidenceTolerance() & dict(am=0, n_harmonics=0) # TODO: is n_harmonics=0 necessary, what's with the newly recorded cells?
 
     def _make_tuples(self, key):
         print('Populating', key)
@@ -618,7 +618,7 @@ class EODStimulusPSTSpikes(dj.Computed):
         df = pd.DataFrame(rel.fetch())
         df['adelta_f'] = np.abs(df.delta_f)
         df['sdelta_f'] = np.sign(df.delta_f)
-        df.sort(['adelta_f', 'sdelta_f'], inplace=True)
+        df.sort_values(['adelta_f', 'sdelta_f'], inplace=True)
         eod = (Runs() & restrictions).fetch('eod').mean()
         if len(df) > 0:
             whs = df.window_half_size.mean()

@@ -353,6 +353,16 @@ class PUnitSimulations(dj.Computed):
         signal       : longblob # membrane potential
         """
 
+    def axes_font_size(self, ax):
+        xtl = ax.xaxis.get_ticklabels()
+        ytl = ax.yaxis.get_ticklabels()
+        if len(xtl) > 0:
+            return xtl[0].get_fontsize()
+        elif len(ytl) > 0:
+            return ytl[0].get_fontsize()
+        else:
+            raise ValueError('No xtick or ytick labels found')
+
     def plot_stimulus_spectrum(self, key, ax, f_max=2000):
         dt = (self & key).fetch1('dt')
         eod = (EODFit() & key).fetch1('fundamental')
@@ -385,8 +395,7 @@ class PUnitSimulations(dj.Computed):
         # tmp = lp * dho
         # tmp /=tmp.max()
         # ax.plot(w[idx], tmp, '-', color='gray', label=' filter product', lw=1, zorder=-10)
-
-        fonsize=ax.xaxis.get_ticklabels()[0].get_fontsize()
+        fonsize=self.axes_font_size(ax)
         ax.text(eod, 1.1, r'EODf', rotation=0, horizontalalignment='center',
                 verticalalignment='bottom', fontsize=fonsize)
         ax.plot(eod, val_at(w[idx], S[idx], eod), marker=markerdict['eod'], color=colordict['eod'])
@@ -425,7 +434,7 @@ class PUnitSimulations(dj.Computed):
         M /= M[idx].max()
         ax.fill_between(w[idx], 0 * w[idx], M[idx], color='darkslategray')
         ax.set_ylim((0, 1.5))
-        fonsize = ax.xaxis.get_ticklabels()[0].get_fontsize()
+        fonsize=self.axes_font_size(ax)
         ax.text(fstim - eod, 0.47, r'$\Delta f$', rotation=0, horizontalalignment='center',
                 verticalalignment='bottom', fontsize=fonsize)
 
@@ -449,7 +458,7 @@ class PUnitSimulations(dj.Computed):
 
         ax.set_ylim((0, .8))
         ax.set_yticks(np.arange(0, 1, .4))
-        fonsize = ax.xaxis.get_ticklabels()[0].get_fontsize()
+        fonsize=self.axes_font_size(ax)
         ax.fill_between(w[idx], 0 * w[idx], vs[idx], color='darkslategray')
         ci = second_order_critical_vector_strength(stimulus_spikes)
         ax.fill_between(w[idx], 0 * w[idx], 0 * w[idx] + ci, color='silver', alpha=.5)

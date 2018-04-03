@@ -1,0 +1,47 @@
+version: '2'
+
+services:
+  locker:
+    build: .
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - /backup-kraken/efish_data/ephys/:/data/
+      - .:/efish/
+      - $HOME/pyrelacs:/src/pyrelacs
+    environment:
+      - DISPLAY=$DISPLAY
+    entrypoint: /bin/bash
+    env_file: .env
+
+  plotter:
+    build: .
+    volumes:
+      - .:/efish/
+#      - ./figures/:/efish/figures
+      - $HOME/Dropbox/figures/efish:/efish/figures
+    environment:
+      - DISPLAY=$DISPLAY
+    entrypoint: /bin/bash
+    env_file: .env
+    network_mode: "host"
+
+  jupyter:
+    build: .
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - /backup-kraken/efish_data/ephys/:/data/
+      - .:/efish/
+    environment:
+      - DISPLAY=$DISPLAY
+    env_file: .env
+    ports:
+      - "7777:8888"
+
+  jupyter_local:
+    build: .
+    volumes:
+      - .:/efish/
+      - $HOME/Dropbox/notebooks/efish:/efish/notebooks
+    env_file: .env
+    ports:
+      - "7777:8888"
