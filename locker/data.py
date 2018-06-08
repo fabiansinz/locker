@@ -85,6 +85,16 @@ class PaperCells(dj.Lookup):
                 {'cell_id': '2017-10-25-ae-invivo-1'},  # bursty
                 {'cell_id': '2017-10-25-aj-invivo-1'},
                 {'cell_id': '2017-10-25-an-invivo-1'},
+                #--- new cells
+                {'cell_id': '2018-05-08-aa-invivo-1'},
+                {'cell_id': '2018-05-08-ab-invivo-1'},
+                {'cell_id': '2018-05-08-ac-invivo-1'},
+                {'cell_id': '2018-05-08-ad-invivo-1'},
+                {'cell_id': '2018-05-08-ae-invivo-1'},
+                {'cell_id': '2018-05-08-af-invivo-1'},
+                {'cell_id': '2018-05-08-ag-invivo-1'},
+                {'cell_id': '2018-05-08-ah-invivo-1'},
+                {'cell_id': '2018-05-08-ai-invivo-1'},
                 ]
 
 
@@ -750,7 +760,7 @@ class Runs(dj.Imported):
 
                 duration = ureg.parse_expression(spi_m['Settings']['Stimulus']['duration']).to(time_unit).magnitude
 
-                if 'ampl' in spi_m['Settings']['Stimulus']:
+                if 'ampl' in spi_m['Settings']['Stimulus']: # TODO: check whether that needs to be adapted to correctly detect the number of harmonics
                     nharmonics = len(list(map(float, spi_m['Settings']['Stimulus']['ampl'].strip().split(','))))
                 else:
                     nharmonics = 0
