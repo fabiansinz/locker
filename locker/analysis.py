@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from itertools import count
+from warnings import warn
 
 from scipy.interpolate import InterpolatedUnivariateSpline
 from tqdm import tqdm
@@ -190,7 +191,11 @@ class TrialAlign(dj.Computed):
         for trial_key in tqdm(trials.fetch.keys()):
             ep, sp = (trials & trial_key).fetch1('peaks', 'stim_peaks')
             p0 = ep[np.abs(sp[:, None] - ep[None, :]).min(axis=0) <= tol * samplingrate] / samplingrate
-            self.Alignment().insert1(dict(trial_key, **key, t0=p0.min()), ignore_extra_fields=True)
+            if len(p0) == 0:
+                warn('Could not find an alignment within given tolerance of {}s. Skipping!'.format(tol))
+                continue
+            else:
+                self.Alignment().insert1(dict(trial_key, **key, t0=p0.min()), ignore_extra_fields=True)
 
     def load_trials(self, restriction):
         """
@@ -270,7 +275,13 @@ class FirstOrderSpikeSpectra(dj.Computed, PlotableSpectrum):
         samplingrate, duration = (Runs() & key).fetch1('samplingrate', 'duration')
         f_max = (SpectraParameters() & key).fetch1('f_max')
 
-        aggregated_spikes = np.hstack(TrialAlign().load_trials(key))
+        aggregated_spikes = TrialAlign().load_trials(key)
+        if len(aggregated_spikes) > 0:
+            aggregated_spikes = np.hstack(aggregated_spikes)
+        else:
+            warn("Trial align returned no spikes! Continuing")
+            return
+
         key['frequencies'], key['vector_strengths'], key['critical_value'] = \
             self.compute_1st_order_spectrum(aggregated_spikes, samplingrate, duration, alpha=0.001, f_max=f_max)
         vs = key['vector_strengths']
@@ -849,7 +860,12 @@ class StimulusSpikeJitter(dj.Computed):
         else:
             eod = (Runs() & key).fetch1('eod')
 
-        aggregated_spikes = np.hstack(TrialAlign().load_trials(key))
+        aggregated_spikes = TrialAlign().load_trials(key)
+        if len(aggregated_spikes) == 0:
+            warn('TrialAlign returned no spikes. Skipping')
+            return
+        else:
+            aggregated_spikes = np.hstack(aggregated_spikes)
         aggregated_spikes %= 1 / eod
 
         aggregated_spikes *= eod * 2 * np.pi  # normalize to 2*pi

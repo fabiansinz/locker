@@ -1,4 +1,5 @@
 from itertools import count
+from warnings import warn
 
 import datajoint as dj
 # import os
@@ -11,6 +12,7 @@ import datajoint as dj
 import os
 import numpy as np
 
+from pyrelacs.DataClasses.RelacsFile import EmptyException
 from .utils.modeling import butter_lowpass_filter
 from . import colordict
 from .utils.data import peakdet
@@ -85,6 +87,11 @@ class PaperCells(dj.Lookup):
                 {'cell_id': '2017-10-25-ae-invivo-1'},  # bursty
                 {'cell_id': '2017-10-25-aj-invivo-1'},
                 {'cell_id': '2017-10-25-an-invivo-1'},
+                #--- pyramidal cells
+                {'cell_id': '2017-11-08-aa-invivo-1'},
+                {'cell_id': '2017-11-10-aa-invivo-1'},
+                {'cell_id': '2017-08-11-ae-invivo-1'},
+                {'cell_id': '2017-08-17-ae-invivo-1'},
                 #--- new cells
                 {'cell_id': '2018-05-08-aa-invivo-1'},
                 {'cell_id': '2018-05-08-ab-invivo-1'},
@@ -95,6 +102,17 @@ class PaperCells(dj.Lookup):
                 {'cell_id': '2018-05-08-ag-invivo-1'},
                 {'cell_id': '2018-05-08-ah-invivo-1'},
                 {'cell_id': '2018-05-08-ai-invivo-1'},
+                #--- more from 2017
+                {'cell_id': '2017-08-11-aa-invivo-1'},
+                {'cell_id': '2017-08-11-ab-invivo-1'},
+                {'cell_id': '2017-08-11-ac-invivo-1'},
+                {'cell_id': '2017-08-11-ad-invivo-1'},
+                {'cell_id': '2017-10-25-ad-invivo-1'},
+                {'cell_id': '2017-10-25-ae-invivo-1'},
+                # {'cell_id': '2017-10-25-aq-invivo-1'},
+                # --- new from 2018
+                {'cell_id': '2018-06-26-aa-invivo-1'},
+                {'cell_id': '2018-06-26-ak-invivo-1'},
                 ]
 
 
@@ -126,9 +144,14 @@ class EFishes(dj.Imported):
         a = a['Subject'] if 'Subject' in a else a['Recording']['Subject']
 
         if not animals.CensusSubject() & dict(name=a['Identifier']):
-            tmp = a['Identifier'].split('lepto')
-            tmp[-1] = '{:04d}'.format(int(tmp[-1]))
-            a['Identifier'] = 'lepto'.join(tmp)
+            if 'zucht' in a['Identifier']:
+                tmp = a['Identifier'].split('leptozucht')
+                tmp[-1] = '{:04d}'.format(int(tmp[-1]))
+                a['Identifier'] = 'leptozucht'.join(tmp)
+            else:
+                tmp = a['Identifier'].split('lepto')
+                tmp[-1] = '{:04d}'.format(int(tmp[-1]))
+                a['Identifier'] = 'lepto'.join(tmp)
         fish_id = (animals.CensusSubject() & dict(name=a['Identifier'])).fetch1('id')
 
         self.insert1(dict(key,
@@ -695,6 +718,31 @@ class Runs(dj.Imported):
         spike_times = [s / 1000 for s in spike_times]  # convert to s
         return trial_ids, spike_times
 
+    def check_run_indices(self):
+        for key in self.key_source.fetch('KEY'):
+            repro = 'SAM'
+            basedir = BASEDIR + key['cell_id']
+            spikefile = basedir + '/samallspikes1.dat'
+            if os.path.isfile(spikefile):
+                stimuli = load(basedir + '/stimuli.dat')
+                traces = load_traces(basedir, stimuli)
+                spikes = load(spikefile)
+                spi_meta, spi_key, spi_data = spikes.selectall()
+
+                globalefield = Runs.GlobalEFieldPeaksTroughs()
+                localeodpeaks = Runs.LocalEODPeaksTroughs()
+                localeod = Runs.LocalEOD()
+                globaleod = Runs.GlobalEOD()
+                globaleodpeaks = Runs.GlobalEODPeaksTroughs()
+                spike_table = Runs.SpikeTimes()
+                # v1trace = Runs.VoltageTraces()
+
+                for run_idx, (spi_d, spi_m) in enumerate(zip(spi_data, spi_meta)):
+                    if run_idx != spi_m['index']:
+                        print('Indices do not match for key', key)
+                    else:
+                        print('.', end='', flush=True)
+
     def _make_tuples(self, key):
         repro = 'SAM'
         basedir = BASEDIR + key['cell_id']
@@ -704,7 +752,6 @@ class Runs(dj.Imported):
             traces = load_traces(basedir, stimuli)
             spikes = load(spikefile)
             spi_meta, spi_key, spi_data = spikes.selectall()
-
             globalefield = Runs.GlobalEFieldPeaksTroughs()
             localeodpeaks = Runs.LocalEODPeaksTroughs()
             localeod = Runs.LocalEOD()
@@ -713,11 +760,17 @@ class Runs(dj.Imported):
             spike_table = Runs.SpikeTimes()
             # v1trace = Runs.VoltageTraces()
 
-            for run_idx, (spi_d, spi_m) in enumerate(zip(spi_data, spi_meta)):
+            for (spi_d, spi_m) in zip(spi_data, spi_meta):
+                run_idx = spi_m['index']
+
                 print("\t%s run %i" % (repro, run_idx))
 
                 # match index from stimspikes with run from stimuli.dat
-                stim_m, stim_k, stim_d = stimuli.subkey_select(RePro=repro, Run=spi_m['index'])
+                try:
+                    stim_m, stim_k, stim_d = stimuli.subkey_select(RePro=repro, Run=spi_m['index'])
+                except EmptyException:
+                    warn('Empty stimuli for '+ repr(spi_m))
+                    continue
 
                 if len(stim_m) > 1:
                     raise KeyError('%s and index are not unique to identify stimuli.dat block.' % (repro,))
@@ -760,8 +813,12 @@ class Runs(dj.Imported):
 
                 duration = ureg.parse_expression(spi_m['Settings']['Stimulus']['duration']).to(time_unit).magnitude
 
-                if 'ampl' in spi_m['Settings']['Stimulus']: # TODO: check whether that needs to be adapted to correctly detect the number of harmonics
-                    nharmonics = len(list(map(float, spi_m['Settings']['Stimulus']['ampl'].strip().split(','))))
+                if 'ampl' in spi_m['Settings']['Stimulus']:
+                    harmonics = np.array(list(map(float, spi_m['Settings']['Stimulus']['ampl'].strip().split(','))))
+                    if np.all(harmonics == 0):
+                        nharmonics = 0
+                    else:
+                        nharmonics = len(harmonics)
                 else:
                     nharmonics = 0
 
