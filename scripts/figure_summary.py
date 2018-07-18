@@ -34,7 +34,7 @@ sns.set_context('paper')
 dfn = np.arange(-500, 600,100)
 df = ['%.0f' % c for c in dfn]
 with sns.axes_style('ticks'):
-    fig, ax = plt.subplots(2, 1, sharex=True)
+    fig, ax = plt.subplots(2, 1, sharex=True, figsize=(4,4))
 perc = perc.set_index(['contrast','delta_f'])
 
 df_num = df_num.reset_index()
@@ -47,7 +47,7 @@ for contrast, shift, color in zip(['10%', '20%'], [-1,+1], ['lightgrey','grey'])
               label=contrast)
     ax[1].bar(dfn - shift*w/2, perc.ix[contrast].ix[df,'lock'], align='center', width=w, lw=0, color=color)
 
-ax[0].legend(title='contrast')
+ax[0].legend(title='contrast', ncol=2, bbox_to_anchor=(.5, 0.95))
 ax[1].set_xticks(dfn)
 ax[1].set_xticklabels(df)
 ax[1].set_xlabel(r'$\Delta f$ [Hz]')
@@ -59,6 +59,6 @@ for a in ax:
     for axis in ['top', 'bottom', 'left', 'right']:
         a.spines[axis].set_linewidth(1)
 
-
-fig.subplots_adjust(bottom=.2)
+fig.tight_layout()
+fig.subplots_adjust(top=.9)
 plt.savefig('figures/summary.pdf')

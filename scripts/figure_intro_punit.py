@@ -1,4 +1,5 @@
 import matplotlib
+
 matplotlib.use('Agg')
 import seaborn as sns
 from locker import mkdir
@@ -7,6 +8,7 @@ from scripts.config import params as plot_params, FormatedFigure
 import matplotlib.pyplot as plt
 from locker.analysis import *
 import pycircstat as circ
+
 
 def generate_filename(cell, contrast):
     dir = 'figures/figure_intro/{cell_type}/'.format(**cell)
@@ -23,12 +25,11 @@ class FigureIntroPunit(FormatedFigure):
             gs = plt.GridSpec(3, 2)
             self.ax = {
                 'scatter': self.fig.add_subplot(gs[-1, :]),
-                # 'spectrum': self.fig.add_subplot(gs[1:, :-1]),
                 'ISI': self.fig.add_subplot(gs[1, 1]),
                 'EOD': self.fig.add_subplot(gs[1, 0]),
 
             }
-            self.ax['scatter_base'] =  self.fig.add_subplot(gs[0, :])
+            self.ax['scatter_base'] = self.fig.add_subplot(gs[0, :])
             self.ax['EOD_ampl'] = self.ax['EOD'].twinx()
         self.gs = gs
 
@@ -43,21 +44,19 @@ class FigureIntroPunit(FormatedFigure):
     def format_scatter_base(ax):
         sns.despine(ax=ax, left=True)
         ax.set_yticks([])
-        ax.legend(ncol=3, bbox_to_anchor=(1,1.1), loc=1)
+        ax.legend(ncol=3, bbox_to_anchor=(1, 1.1), loc=1)
         ax.text(-.07, 1.01, 'A', transform=ax.transAxes, fontweight='bold')
-
 
     @staticmethod
     def format_EOD(ax):
-
         ax.text(-0.16, 1.01, 'B', transform=ax.transAxes, fontweight='bold')
         yl, yh = ax.get_ylim()
         ax.set_ylim((yl, 1.2 * yh))
         ax.set_yticks([])
-        ax.set_xticks(np.linspace(0,1.2,5))
-        ax.set_xticklabels(np.linspace(0,1.2,5))
+        ax.set_xticks(np.linspace(0, 1.2, 5))
+        ax.set_xticklabels(np.linspace(0, 1.2, 5))
         # ax.tick_params(axis='both', length=0, width=0, which='major')
-        ax.set_xlim((0, 1.2 ))
+        ax.set_xlim((0, 1.2))
         ax.set_xlabel('time [ms]')
         sns.despine(ax=ax, left=True, right=True, trim=True)
         ax.legend(ncol=1)
@@ -68,19 +67,17 @@ class FigureIntroPunit(FormatedFigure):
         sns.despine(ax=ax, trim=True)
         yl, yh = ax.get_ylim()
         ax.yaxis.set_label_position("left")
-        ax.set_ylim((yl, 1.3*yh))
-        ax.set_xlim((0, 1.2 ))
+        ax.set_ylim((yl, 1.3 * yh))
+        ax.set_xlim((0, 1.2))
 
         # ax.legend(ncol=1, bbox_to_anchor=((.3,1.)))
-        ax.legend(ncol=1, bbox_to_anchor=((.6,1.)))
-
-
+        ax.legend(ncol=1, bbox_to_anchor=((.6, 1.)))
 
     @staticmethod
     def format_scatter(ax):
         sns.despine(ax=ax, left=True)
         ax.set_xlabel('time [EOD cycles]')
-        ax.legend(ncol=4, loc=0, bbox_to_anchor=(1,1.1))
+        ax.legend(ncol=4, loc=0, bbox_to_anchor=(1, 1.1))
         ax.text(-0.07, 1.02, 'D', transform=ax.transAxes, fontweight='bold')
 
     def format_figure(self):
@@ -92,14 +89,13 @@ class FigureIntroPunit(FormatedFigure):
 if __name__ == "__main__":
 
     runs = Runs()
-    for cell in (Cells() & dict(cell_type='p-unit', cell_id='2014-12-03-ao')).fetch(as_dict=True):
-
-        unit = cell['cell_type']
+    for cell in (Cells() & dict(cell_type='p-unit', cell_id='2014-12-03-ao')).fetch("KEY"):
+        unit = (Cells & cell).fetch1('cell_type')
+        cell['cell_type'] = unit
         print('Processing', cell['cell_id'])
         contrast = 20
 
         target_trials = runs & cell & dict(contrast=contrast, am=0, n_harmonics=0, delta_f=200)
-
         if len(target_trials) > 0:
             with FigureIntroPunit(filename=generate_filename(cell, contrast=contrast)) as (fig, ax):
                 # --- plot baseline spikes
@@ -112,7 +108,7 @@ if __name__ == "__main__":
 
                 if Baseline.SpikeTimes() & cell:
                     times = (Baseline.SpikeTimes() & cell).fetch1('times') / 1000
-                    eod, sampling_rate = (Baseline() & cell).fetch1('eod', 'samplingrate')
+                    eod, sampling_rate = (Baseline().proj('eod', 'samplingrate') & cell).fetch1('eod', 'samplingrate')
                     period = 1 / eod
                     t = (times % period)
                     nu = circ.vector_strength(t / period * 2 * np.pi)
@@ -122,5 +118,4 @@ if __name__ == "__main__":
                 # --- plot ISI histogram
                 ISIHistograms().plot(ax=ax['ISI'], restrictions=cell)
 
-
-                EODStimulusPSTSpikes().plot_single(ax=ax['scatter'], restrictions=target_trials)
+                EODStimulusPSTSpikes().plot_single(ax=ax['scatter'], restrictions=target_trials.fetch1("KEY"))

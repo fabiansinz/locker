@@ -48,10 +48,11 @@ if __name__ == "__main__":
     delta_f = 200
 
     runs = Runs()
-    for cell in (Cells() & dict(cell_type='p-unit', cell_id='2014-12-03-ao')).fetch.as_dict:
+    for cell in (Cells() & dict(cell_type='p-unit', cell_id='2014-12-03-ao')).fetch("KEY"):
 
-        unit = cell['cell_type']
         print('Processing', cell['cell_id'])
+        unit = (Cells & cell).fetch1('cell_type')
+        cell['cell_type'] = unit
 
         spectrum = SecondOrderSpikeSpectra()
         speaks = SecondOrderSignificantPeaks()

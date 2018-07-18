@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 params = {'axes.labelsize': 7,
           'axes.labelpad': 1.0,
           'axes.titlesize': 7,
-          'text.fontsize': 7,
           'xtick.labelsize': 7,
           'ytick.labelsize': 7,
           'legend.fontsize': 7,

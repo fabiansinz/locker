@@ -16,8 +16,9 @@ rel = Runs() * SecondOrderSignificantPeaks() * StimulusSpikeJitter() * Cells() \
 
 df = pd.DataFrame(rel.fetch())
 
-print("n={0} cells".format(len(Cells() & rel)))
-print("n={0} trials".format(len(Runs() & rel)))
+print("n={0} cells".format(len(Cells().proj() & rel)))
+
+print("n={0} trials".format(len(Runs().proj() & rel)))
 df['spread'] = df['stim_std'] / df['eod'] / 2 / np.pi
 df['jitter'] = df['stim_std']  # rename to avoid conflict with std function
 

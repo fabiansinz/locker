@@ -16,7 +16,7 @@ class SimulationFigure:
         sns.set_style('ticks')
         sns.set_context('paper')
         with plt.rc_context(plot_params):
-            self.fig, self.ax = plt.subplots(4, 1, figsize=(7, 7), dpi=400, sharex=True)
+            self.fig, self.ax = plt.subplots(4, 1, figsize=(7, 6), dpi=400, sharex=True)
             self.ax = {
                 'stimulus_spectrum': self.ax[0],
                 'membrane_spectrum': self.ax[1],
@@ -61,14 +61,6 @@ class SimulationFigure:
         if ax['real_spike_spectrum'].legend_ is not None:
             ax['real_spike_spectrum'].legend_.set_bbox_to_anchor((1., 1.),
                                                              transform=ax['real_spike_spectrum'].transAxes)
-        # ax['stimulus_spectrum'].legend_.set_bbox_to_anchor((1.2, 1))
-        # sns.despine(ax=self.ax['real_isi'], left=True, trim=True)
-        # sns.despine(ax=self.ax['sim_isi'], left=True, trim=True)
-
-        # self.ax['real_isi'].set_yticks([])
-        # self.ax['sim_isi'].set_yticks([])
-        # self.ax['real_isi'].set_xticks(range(0,20,5))
-        # self.ax['sim_isi'].set_xticks(range(0,20,5))
 
         ax['stimulus_spectrum'].text(-0.1, 1, 'A', transform=ax['stimulus_spectrum'].transAxes, fontweight='bold')
         ax['membrane_spectrum'].text(-0.1, 1, 'B', transform=ax['membrane_spectrum'].transAxes, fontweight='bold')
