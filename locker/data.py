@@ -87,12 +87,12 @@ class PaperCells(dj.Lookup):
                 {'cell_id': '2017-10-25-ae-invivo-1'},  # bursty
                 {'cell_id': '2017-10-25-aj-invivo-1'},
                 {'cell_id': '2017-10-25-an-invivo-1'},
-                #--- pyramidal cells
+                # --- pyramidal cells
                 {'cell_id': '2017-11-08-aa-invivo-1'},
                 {'cell_id': '2017-11-10-aa-invivo-1'},
                 {'cell_id': '2017-08-11-ae-invivo-1'},
                 {'cell_id': '2017-08-17-ae-invivo-1'},
-                #--- new cells
+                # --- new cells
                 {'cell_id': '2018-05-08-aa-invivo-1'},
                 {'cell_id': '2018-05-08-ab-invivo-1'},
                 {'cell_id': '2018-05-08-ac-invivo-1'},
@@ -102,7 +102,7 @@ class PaperCells(dj.Lookup):
                 {'cell_id': '2018-05-08-ag-invivo-1'},
                 {'cell_id': '2018-05-08-ah-invivo-1'},
                 {'cell_id': '2018-05-08-ai-invivo-1'},
-                #--- more from 2017
+                # --- more from 2017
                 {'cell_id': '2017-08-11-aa-invivo-1'},
                 {'cell_id': '2017-08-11-ab-invivo-1'},
                 {'cell_id': '2017-08-11-ac-invivo-1'},
@@ -232,7 +232,7 @@ class FICurves(dj.Imported):
     def plot(self, ax, restrictions):
         rel = self & restrictions
         try:
-            contrast, f0, fs = (self & restrictions).fetch1['ir', 'f_0', 'f_s']
+            contrast, f0, fs = (self & restrictions).fetch1('ir', 'f_0', 'f_s')
         except dj.DataJointError:
             return
         ax.plot(contrast, f0, '--k', label='onset response', dashes=(2, 2))
@@ -277,7 +277,7 @@ class ISIHistograms(dj.Imported):
 
     def plot(self, ax, restrictions):
         try:
-            eod_cycles, p = (ISIHistograms() & restrictions).fetch1['eod', 'p']
+            eod_cycles, p = (ISIHistograms() & restrictions).fetch1('eod', 'p')
         except dj.DataJointError:
             return
         dt = eod_cycles[1] - eod_cycles[0]
@@ -369,8 +369,8 @@ class Baseline(dj.Imported):
         :return: mean and variance
         """
         rel = self & restrictions
-        spikes = (Baseline.SpikeTimes() & rel).fetch1['times']
-        eod = rel.fetch1['eod']
+        spikes = (Baseline.SpikeTimes() & rel).fetch1('times')
+        eod = rel.fetch1('eod')
         period = 1 / eod
         factor = 2 * np.pi / period
         t = (spikes % period)
@@ -380,12 +380,12 @@ class Baseline(dj.Imported):
 
     def plot_psth(self, ax, restrictions):
         minimum_rep = (Baseline.SpikeTimes() & restrictions).fetch['repeat'].min()
-        spikes = (Baseline.SpikeTimes() & restrictions & dict(repeat=minimum_rep)).fetch1[
-                     'times'] / 1000  # convert to s
+        spikes = (Baseline.SpikeTimes() & restrictions & dict(repeat=minimum_rep)).fetch1(
+            'times') / 1000  # convert to s
 
-        eod, sampling_rate = (self & restrictions).fetch1['eod', 'samplingrate']
+        eod, sampling_rate = (self & restrictions).fetch1('eod', 'samplingrate')
         if (Baseline.LocalEODPeaksTroughs() & restrictions):
-            spikes -= (Baseline.LocalEODPeaksTroughs() & restrictions).fetch1['peaks'][0] / sampling_rate
+            spikes -= (Baseline.LocalEODPeaksTroughs() & restrictions).fetch1('peaks')[0] / sampling_rate
 
         period = 1 / eod
         t = (spikes % period)
@@ -400,8 +400,8 @@ class Baseline(dj.Imported):
         ax.set_yticks([])
 
     def plot_raster(self, ax, cycles=21, repeats=20):
-        sampl_rate, duration, eod = self.fetch1['samplingrate', 'duration', 'eod']
-        peaks, spikes = (self * self.SpikeTimes() * self.LocalEODPeaksTroughs()).fetch1['peaks', 'times']
+        sampl_rate, duration, eod = self.fetch1('samplingrate', 'duration', 'eod')
+        peaks, spikes = (self * self.SpikeTimes() * self.LocalEODPeaksTroughs()).fetch1('peaks', 'times')
         spikes = spikes / 1000  # convert to s
         pt = peaks / sampl_rate
         spikes, pt = spikes - pt[0], pt - pt[0]
@@ -436,8 +436,8 @@ class Baseline(dj.Imported):
         ax.set_xlabel('time [EOD cycles]')
 
         # EOD
-        if BaseEOD() & self:
-            t, e, pe = (BaseEOD() & self).fetch1['time', 'eod_ampl', 'max_idx']
+        if BaseEOD() & self.proj():
+            t, e, pe = (BaseEOD() & self.proj()).fetch1('time', 'eod_ampl', 'max_idx')
             t = t / 1000
             pe_t = t[pe]
             t = t - pe_t[cycles // 2]
@@ -596,7 +596,7 @@ class BaseRate(dj.Imported):
         self.insert1(key)
 
     def plot(self, ax, ax2, find_range=True):
-        t, rate, ampl, mi, ma = self.fetch1['time', 'eod_rate', 'eod_ampl', 'min_idx', 'max_idx']
+        t, rate, ampl, mi, ma = self.fetch1('time', 'eod_rate', 'eod_ampl', 'min_idx', 'max_idx')
         n = len(t)
         if find_range:
             if len(mi) < 2:
@@ -769,7 +769,7 @@ class Runs(dj.Imported):
                 try:
                     stim_m, stim_k, stim_d = stimuli.subkey_select(RePro=repro, Run=spi_m['index'])
                 except EmptyException:
-                    warn('Empty stimuli for '+ repr(spi_m))
+                    warn('Empty stimuli for ' + repr(spi_m))
                     continue
 
                 if len(stim_m) > 1:
@@ -850,7 +850,7 @@ class Runs(dj.Imported):
                     # tmp['membrane_potential'] = traces['V-1']['data'][start:stop]
                     # # v1trace.insert1(tmp, replace=True)
                     # del tmp['membrane_potential']
-                    #---
+                    # ---
                     global_efield = traces['GlobalEFie']['data'][start:stop].astype(np.float32)
                     if fs > 2 * LOWPASS_CUTOFF:
                         global_efield = butter_lowpass_filter(global_efield, highcut=LOWPASS_CUTOFF,
@@ -858,27 +858,27 @@ class Runs(dj.Imported):
                     _, peaks, _, troughs = peakdet(global_efield)
                     globalefield.insert1(dict(tmp, peaks=peaks, troughs=troughs), ignore_extra_fields=True)
 
-                    #---
+                    # ---
                     local_efield = traces['LocalEOD-1']['data'][start:stop].astype(np.float32)
                     localeod.insert1(dict(tmp, local_efield=local_efield), ignore_extra_fields=True)
                     if fs > 2 * LOWPASS_CUTOFF:
                         local_efield = butter_lowpass_filter(local_efield, highcut=LOWPASS_CUTOFF,
-                                                              fs=fs, order=5)
+                                                             fs=fs, order=5)
                     _, peaks, _, troughs = peakdet(local_efield)
                     localeodpeaks.insert1(dict(tmp, peaks=peaks, troughs=troughs), ignore_extra_fields=True)
 
-                    #---
+                    # ---
                     global_voltage = traces['EOD']['data'][start:stop].astype(np.float32)
                     globaleod.insert1(dict(tmp, global_voltage=global_voltage),
                                       ignore_extra_fields=True)
                     if fs > 2 * LOWPASS_CUTOFF:
                         global_voltage = butter_lowpass_filter(global_voltage, highcut=LOWPASS_CUTOFF,
-                                                              fs=fs, order=5)
+                                                               fs=fs, order=5)
                     _, peaks, _, troughs = peakdet(global_voltage)
                     globaleodpeaks.insert1(dict(tmp, peaks=peaks, troughs=troughs),
                                            ignore_extra_fields=True)
 
-                    #---
+                    # ---
                     tmp['times'] = spi_d[trial_idx]
                     spike_table.insert1(tmp, ignore_extra_fields=True)
 
