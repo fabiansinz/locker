@@ -375,7 +375,7 @@ class PUnitSimulations(dj.Computed):
         S = np.abs(np.fft.fft(stimulus_signal))
         S /= S.max()
 
-        ax.fill_between(w[idx], 0 * w[idx], S[idx], color='darkslategray')
+        ax.fill_between(w[idx], 0 * w[idx], S[idx], color='k')
 
         # --- get parameters from database
         zeta, tau, gain, wr, lif_tau, offset, threshold, reset, noisesd = (LIFPUnit() & key).fetch1(
@@ -432,7 +432,7 @@ class PUnitSimulations(dj.Computed):
 
         M = np.abs(np.fft.fft(membrane_potential))
         M /= M[idx].max()
-        ax.fill_between(w[idx], 0 * w[idx], M[idx], color='darkslategray')
+        ax.fill_between(w[idx], 0 * w[idx], M[idx], color='k')
         ax.set_ylim((0, 1.5))
         fonsize=self.axes_font_size(ax)
         ax.text(fstim - eod, 0.47, r'$\Delta f$', rotation=0, horizontalalignment='center',
@@ -459,7 +459,7 @@ class PUnitSimulations(dj.Computed):
         ax.set_ylim((0, .8))
         ax.set_yticks(np.arange(0, 1, .4))
         fonsize=self.axes_font_size(ax)
-        ax.fill_between(w[idx], 0 * w[idx], vs[idx], color='darkslategray')
+        ax.fill_between(w[idx], 0 * w[idx], vs[idx], color='k')
         ci = second_order_critical_vector_strength(stimulus_spikes)
         ax.fill_between(w[idx], 0 * w[idx], 0 * w[idx] + ci, color='silver', alpha=.5)
         ax.text(eod3, 0.27, r'EODf - $\Delta f$' % eod3, rotation=0, horizontalalignment='center',
