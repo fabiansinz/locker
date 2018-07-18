@@ -19,6 +19,7 @@ services:
       - .:/efish/
 #      - ./figures/:/efish/figures
       - $HOME/Dropbox/figures/efish:/efish/figures
+      - $HOME/code/pyrelacs:/src/pyrelacs
     environment:
       - DISPLAY=$DISPLAY
     entrypoint: /bin/bash
@@ -28,9 +29,9 @@ services:
   jupyter:
     build: .
     volumes:
-      - /tmp/.X11-unix:/tmp/.X11-unix
-      - /backup-kraken/efish_data/ephys/:/data/
       - .:/efish/
+      - $HOME/Dropbox/figures/efish:/efish/figures
+      - $HOME/code/pyrelacs:/src/pyrelacs
     environment:
       - DISPLAY=$DISPLAY
     env_file: .env

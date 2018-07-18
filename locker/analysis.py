@@ -55,7 +55,7 @@ class PlotableSpectrum:
             # only take frequencies within defined ange
             idx = (f >= 0) & (f <= f_max) & ~np.isnan(v)
             ax.fill_between(f[idx], 0 * f[idx], 0 * f[idx] + alpha, lw=0, color='silver')
-            ax.fill_between(f[idx], 0 * f[idx], v[idx], lw=0, color='darkslategray')
+            ax.fill_between(f[idx], 0 * f[idx], v[idx], lw=0, color='k')
 
             ax.set_xlabel('frequency [Hz]')
             ax.set_ylabel('vector strength')
@@ -636,7 +636,8 @@ class EODStimulusPSTSpikes(dj.Computed):
             cycles = int(whs * eod) * 2
             db = 2 * whs / 400
             bins = np.arange(-whs, whs + db, db)
-            g = np.exp(-np.linspace(-whs, whs, len(bins) - 1) ** 2 / 2 / (whs / 25) ** 2)
+            # g = np.exp(-np.linspace(-whs, whs, len(bins) - 1) ** 2 / 2 / (whs / 25) ** 2)
+            g = np.exp(-np.linspace(-whs, whs, len(bins) - 1) ** 2 / 2 / (whs / 100) ** 2)
             print('Low pass kernel sigma=', whs / 25)
             bin_centers = 0.5 * (bins[1:] + bins[:-1])
             y = [0]
