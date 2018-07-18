@@ -1,5 +1,5 @@
 import matplotlib
-matplotlib.use('Agg')
+# matplotlib.use('Agg')
 import os
 from collections import OrderedDict
 import seaborn as sns

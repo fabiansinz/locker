@@ -1,4 +1,5 @@
 import matplotlib
+
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import statsmodels.api as sm
@@ -13,7 +14,6 @@ rel = Runs() * SecondOrderSignificantPeaks() * StimulusSpikeJitter() * Cells() \
 # & 'stimulus_coeff = 1' \
 
 
-
 df = pd.DataFrame(rel.fetch())
 
 print("n={0} cells".format(len(Cells().proj() & rel)))
@@ -25,7 +25,7 @@ df['jitter'] = df['stim_std']  # rename to avoid conflict with std function
 sns.set_context('paper')
 
 with sns.axes_style('ticks'):
-    fig, ax = plt.subplots(1, 3, figsize=(7, 3), dpi=400, sharey=True)
+    fig, ax = plt.subplots(1, 3, figsize=(7, 3), dpi=400, sharey=False)
 ax = dict(zip(['contrast', 'stimulus', 'cstd'], ax))
 
 # =============================================================================
@@ -44,36 +44,20 @@ ax['contrast'].tick_params('y', length=3, width=1)
 # ax['contrast'].set_xlim((-.2, 3.5))
 ax['contrast'].set_xlabel('contrast [%]')
 ax['contrast'].text(-0.3, 1, 'A', transform=ax['contrast'].transAxes, fontweight='bold')
+ax['contrast'].set_ylim((0, 1))
 
-# =============================================================================
-# --- statistical analysis
-
-glm = smf.glm('vector_strength ~ frequency * jitter + contrast', data=df, family=sm.families.Gamma()).fit()
-
-print(glm.summary())
-print(glm.pvalues)
-
-print('1 sigma in Frequency domain', np.mean(1 / (2 * np.pi * df.spread)))
-print('min sigma in Frequency domain', np.min(1 / (2 * np.pi * df.spread)))
-print('max sigma in Frequency domain', np.max(1 / (2 * np.pi * df.spread)))
-print('2 sigma in Frequency domain', np.mean(2 / (2 * np.pi * df.spread)))
-
-# =============================================================================
-print(r"contrast: \rho={0}    p={1}".format(*stats.pearsonr(df.contrast, df.vector_strength)))
-df = df[df.contrast == 20]
-print(r"jitter: \rho={0}    p={1}".format(*stats.pearsonr(df.jitter, df.vector_strength)))
-print(r"frequency: \rho={0}    p={1}".format(*stats.pearsonr(df.frequency, df.vector_strength)))
 
 # =============================================================================
 # --- plot frequency vs. vector strength
 sc = ax['stimulus'].scatter(df.frequency, df.vector_strength, c=df.jitter, cmap=plt.get_cmap('viridis'), edgecolors='w',
-                            lw=.5)
+                            lw=.5, s=20)
 cb = fig.colorbar(sc, ax=ax['stimulus'])
 cb.set_ticks((np.pi / 4, np.pi / 3, np.pi / 2, 2 * np.pi / 3))
 cb.set_ticklabels([r'$\frac{\pi}{4}$', r'$\frac{\pi}{3}$', r'$\frac{\pi}{2}$', r'$\frac{2\pi}{3}$'])
 cb.set_label('circular std [unit circle circumference]', fontsize=8)
 ax['stimulus'].set_ylim((0, 1))
 ax['stimulus'].tick_params('y', length=0, width=0)
+ax['stimulus'].set_yticklabels([])
 ax['stimulus'].set_xlim((0, 1800))
 ax['stimulus'].set_xticks(np.arange(0, 2000, 500))
 
@@ -83,15 +67,18 @@ ax['stimulus'].text(-0.1, 1, 'B', transform=ax['stimulus'].transAxes, fontweight
 # =============================================================================
 # --- plot jitter vs. vector strength
 sc = ax['cstd'].scatter(df.jitter, df.vector_strength, c=df.frequency, cmap=plt.get_cmap('viridis'), edgecolors='w',
-                        lw=.5)
-cb = fig.colorbar(sc, ax=ax['cstd'])
+                        lw=.5, s=20)
+cb = fig.colorbar(sc, ax=ax['cstd'], pad=0.2)
 cb.set_label('stimulus frequency [Hz]', fontsize=8)
 # t = np.linspace(1e-6, 1-1e-6,100)
-ax['cstd'].set_xlim((0, 2.8))
-ax['cstd'].set_xticks((0, np.pi / 4, np.pi / 2, 3 / 4 * np.pi))
-ax['cstd'].set_xticklabels([r'$0$', r'$\frac{\pi}{4}$', r'$\frac{\pi}{2}$', r'$\frac{3\pi}{4}$', ])
+ax['cstd'].set_xlim((0, 3.14))
+ax['cstd'].set_xticks((0, np.pi / 4, np.pi / 2, 3 / 4 * np.pi, np.pi))
+ax['cstd'].set_xticklabels([r'$0$', r'$\frac{\pi}{4}$', r'$\frac{\pi}{2}$', r'$\frac{3\pi}{4}$', r'$\pi$'])
 ax['cstd'].tick_params('y', length=0, width=0)
 ax['cstd'].set_xlabel('circular std at EODf')
+ax['cstd'].set_yticklabels([])
+ax['cstd'].set_ylim((0, 1))
+
 # ax['cstd'].plot(np.sqrt(-2*np.log(t)), t , '--k')
 ax['cstd'].text(-0.1, 1, 'C', transform=ax['cstd'].transAxes, fontweight='bold')
 
@@ -108,5 +95,6 @@ sns.despine(ax=ax['cstd'], left=True)
 sns.despine(ax=ax['stimulus'], left=True)
 
 fig.tight_layout()
+fig.subplots_adjust(left=.1, right=0.99, top=.9)
 fig.savefig('figures/figure_factors_punit.pdf')
 fig.savefig('figures/figure_factors_punit.png')
