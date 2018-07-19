@@ -1,4 +1,6 @@
-from matplotlib.collections import PolyCollection
+import matplotlib
+matplotlib.use('Agg')
+
 from numpy.fft import fft, fftfreq, fftshift
 from locker import mkdir
 from locker.analysis import *
@@ -39,14 +41,14 @@ class FigureMechanisms(FormatedFigure):
         sns.despine(ax=ax, left=True, trim=True, offset=0)
         ax.set_yticks([])
         ax.legend(ncol=2, bbox_to_anchor=(1, 1.35))
-        ax.text(-0.01, 1.1, 'A', transform=ax.transAxes, fontweight='bold')
+        ax.text(-0.01, 1.3, 'A', transform=ax.transAxes, fontweight='bold')
 
     @staticmethod
     def format_cartoon_psth_stim(ax):
         sns.despine(ax=ax, left=True, trim=True, offset=0)
         ax.set_yticks([])
         ax.legend(ncol=3, bbox_to_anchor=(1,1.35), loc=1)
-        ax.text(-0.01, 1.1, 'B', transform=ax.transAxes, fontweight='bold')
+        ax.text(-0.01, 1.3, 'B', transform=ax.transAxes, fontweight='bold')
 
     @staticmethod
     def format_spectrum_base(ax):

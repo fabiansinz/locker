@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('Agg')
 from scipy.interpolate import interp1d
 
 from locker import analysis as ana, colordict

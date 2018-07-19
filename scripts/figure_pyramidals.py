@@ -195,10 +195,10 @@ if __name__ == "__main__":
             deltaf_freq.append(spec['delta_f'])
             eod_freq.append(spec['eod'])
 
-        ax['spectrum'].plot(eod_freq, y[:-1], '--', zorder=-1, lw=2, dashes=(3, 7), color=colordict['eod'], label='EOD')
-        ax['spectrum'].plot(stim_freq, y[:-1], '-', zorder=-1, lw=2, dashes=(3, 7), color=colordict['stimulus'],
+        ax['spectrum'].plot(eod_freq, y[:-1], '-',  alpha=.25,  zorder=-10, lw=4, color=colordict['eod'], label='EOD')
+        ax['spectrum'].plot(stim_freq, y[:-1], '-',  alpha=.25,  zorder=-10, lw=4, color=colordict['stimulus'],
                             label='stimulus')
-        ax['spectrum'].plot(np.abs(deltaf_freq), y[:-1], '-', zorder=-1, lw=2, dashes=(3, 7), color=colordict['delta_f'],
+        ax['spectrum'].plot(np.abs(deltaf_freq), y[:-1], '-', alpha=.25,  zorder=-10, lw=4, color=colordict['delta_f'],
                             label=r'$|\Delta f|$')
 
         #====================================================================================
@@ -220,8 +220,8 @@ if __name__ == "__main__":
                  & 'stimulus_coeff = 1' \
                  & 'frequency > 0' \
                  & ['cell_type="i-cell"', 'cell_type="e-cell"']
-        print('n={0} cells tested'.format(len(data.Cells() & ['cell_type="i-cell"', 'cell_type="e-cell"'])))
-        print('n={0} cells locking'.format(len(data.Cells() & rel_py)))
+        print('n={0} cells tested'.format(len(data.Cells & ['cell_type="i-cell"', 'cell_type="e-cell"'])))
+        print('n={0} cells locking'.format(len(data.Cells.proj() & rel_py)))
 
         df_py = pd.DataFrame(rel_py.fetch())
         df_py['spread'] = df_py['stim_std'] / df_py['eod'] / 2 / np.pi
@@ -254,22 +254,22 @@ if __name__ == "__main__":
 
         #====================================================================================
 
-
+        point_size = 10
         ax['vs_freq'].scatter(df_pu.frequency, df_pu.vector_strength, edgecolors='w', lw=.5,
                               color=sns.xkcd_rgb['azure'], \
-                              label='p-units')
+                              label='p-units', s=point_size)
         ax['vs_freq'].scatter(df_py.frequency, df_py.vector_strength, edgecolors='w', lw=.5,
                               color=sns.xkcd_rgb['dark fuchsia'], \
-                              label='pyramidal')
+                              label='pyramidal', s=point_size)
 
         # --- circular variance scatter plots
         ax['circ'].scatter(df_pu.jitter, df_pu.vector_strength, edgecolors='w', lw=.5,
                            color=sns.xkcd_rgb['azure'], \
-                           label='p-units'
+                           label='p-units', s=point_size
                            )
         ax['circ'].scatter(df_py.jitter, df_py.vector_strength, edgecolors='w', lw=.5,
                            color=sns.xkcd_rgb['dark fuchsia'], \
-                           label='pyramidal'
+                           label='pyramidal', s=point_size
                            )
 
 
