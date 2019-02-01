@@ -18,7 +18,7 @@ class FigureBeatStim(FormatedFigure):
         sns.set_palette('PuBuGn_d', n_colors=len(pd.unique(df.cell_id)))
         with plt.rc_context(plot_params):
             self.ax = {}
-            self.fig = plt.figure(figsize=(7, 2.2), dpi=400)
+            self.fig = plt.figure(figsize=(7, 2), dpi=400)
 
             self.ax['difference'] = self.fig.add_subplot(1, 3, 3)
             self.ax['scatter'] = self.fig.add_subplot(1, 3, 1)
@@ -72,27 +72,27 @@ class FigureBeatStim(FormatedFigure):
 
     def format_figure(self):
         sns.despine(self.fig, offset=1, trim=True)
-        self.fig.tight_layout()
-        # self.fig.subplots_adjust(right=.8)
+        # self.fig.tight_layout()
+        self.fig.subplots_adjust(right=0.99, left=.02, bottom=.2, wspace=.2)
 
 
 def plot_locking(df, ax, legend=False):
-    n = []
+    n = {}
     s = 20
     idx = (df.vs_beat >= df.crit_beat) & (df.vs_stimulus < df.crit_stimulus)
-    n.append(idx.sum())
+    n['beat, but not stimulus'] = idx.sum()
     df2 = df[idx].groupby(['cell_id', 'delta_f']).mean().reset_index()
     ax.scatter(df2.vs_beat, df2.vs_stimulus, color=colordict['delta_f'],
                edgecolors='w', lw=.1, s=s, label=r'$\Delta f$ only')
 
     idx = (df.vs_beat < df.crit_beat) & (df.vs_stimulus >= df.crit_stimulus)
-    n.append(idx.sum())
+    n['not beat, but stimulus'] = idx.sum()
     df2 = df[idx].groupby(['cell_id', 'delta_f']).mean().reset_index()
     ax.scatter(df2.vs_beat, df2.vs_stimulus, color=colordict['stimulus'],
                edgecolors='w', lw=.1, s=s, label='stimulus only')
 
     idx = (df.vs_beat >= df.crit_beat) & (df.vs_stimulus >= df.crit_stimulus)
-    n.append(idx.sum())
+    n['beat and stimulus'] = idx.sum()
     df2 = df[idx].groupby(['cell_id', 'delta_f']).mean().reset_index()
     ax.scatter(df2.vs_beat, df2.vs_stimulus, color=sns.xkcd_rgb['teal blue'],
                edgecolors='w', lw=.1, s=s, label='both')
@@ -100,18 +100,22 @@ def plot_locking(df, ax, legend=False):
     ax.set_aspect(1.)
 
     axins = inset_axes(ax,
-                       width="20%",  # width = 30% of parent_bbox
-                       height="20%",  # height : 1 inch
-                       loc=4)
-    axins.bar(0, n[0], color=colordict['delta_f'], align='center')
-    axins.bar(1, n[1], color=colordict['stimulus'], align='center')
-    axins.bar(2, n[2], color=sns.xkcd_rgb['teal blue'], align='center')
+                       width="100%",  # width = 30% of parent_bbox
+                       height="100%",  # height : 1 inch
+                       # loc=4,
+                       bbox_to_anchor=(0.85, .1, .2, .2),
+                       bbox_transform=ax.transAxes
+                       # bbox_to_anchor=(0.8, 0.2, .25, .25)
+                       )
+    axins.bar(0, n['beat, but not stimulus'], color=colordict['delta_f'], align='center')
+    axins.bar(1, n['not beat, but stimulus'], color=colordict['stimulus'], align='center')
+    axins.bar(2, n['beat and stimulus'], color=sns.xkcd_rgb['teal blue'], align='center')
     axins.axis('off')
     ax.plot(*2 * (np.linspace(0, 1, 2),), '--k', zorder=-10)
-    n.append(np.sum(n))
+    n['all'] = np.sum(list(n.values()))
     print(n)
     if legend:
-        ax.legend(ncol=1, prop={'size': 6}, bbox_to_anchor=(.6, 1.1))
+        ax.legend(ncol=1, prop={'size': 6}, bbox_to_anchor=(.65, .7), frameon=False)
 
 
 # ------------------------------------------------------------------------------------------------------
@@ -138,5 +142,5 @@ with FigureBeatStim(filename='figures/figure07beat-vs-stimulus.pdf') as (fig, ax
     ax['difference'].plot(t, np.nanmean(interps, axis=0), '-k', lw=1)
     ax['difference'].plot(t, 0 * t, '--', color='k', lw=1)
 
-    plot_locking(df, ax['scatter'], legend=True)
+    plot_locking(df, ax['scatter'], legend=False)
     plot_locking(df[np.abs(df.delta_f) > 200], ax['scatter2'], legend=True)

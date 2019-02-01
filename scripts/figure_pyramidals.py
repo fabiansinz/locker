@@ -49,7 +49,7 @@ class FigurePyramidals(FormatedFigure):
         sns.despine(ax=ax, left=True, trim=True)
         ax.set_yticks([])
         ax.set_xlim((0, 15))
-        ax.legend()
+        ax.legend(frameon=False)
         ax.text(-0.2, 1, 'A', transform=ax.transAxes, fontweight='bold')
 
     @staticmethod
@@ -57,7 +57,7 @@ class FigurePyramidals(FormatedFigure):
         ax.set_xlim((0, 1000))
         ax.tick_params('x', length=3, width=1)
         ax.spines['bottom'].set_linewidth(1)
-        ax.legend(loc='top left', ncol=3, bbox_transform=ax.transAxes)
+        ax.legend(loc='upper right', ncol=3, bbox_transform=ax.transAxes, frameon=False)
         sns.despine(ax=ax, left=True, trim=True, offset=5)
         ax.set_yticks([])
         ax.set_xlabel('frequency [Hz]')
@@ -81,7 +81,7 @@ class FigurePyramidals(FormatedFigure):
         ax.set_xlim((-.6, 1.2))
         ax.set_xlabel('time [ms]')
         sns.despine(ax=ax, left=True, right=True, trim=True)
-        ax.legend(ncol=1)
+        ax.legend(ncol=1, frameon=False)
 
     @staticmethod
     def format_cycle_ampl(ax):
@@ -92,7 +92,10 @@ class FigurePyramidals(FormatedFigure):
         ax.yaxis.set_label_position("left")
         ax.set_ylim((yl, 1.6 * yh))
         ax.set_xlim((-.6, 1.2))
-        ax.legend(ncol=1, bbox_to_anchor=((.6, 1.)))
+        ax.set_xticks(np.arange(-.6, 1.5, .3))
+        ax.set_xticklabels(['{:.1f}'.format(a) for a in np.arange(-.6, 1.5, .3)])
+
+        ax.legend(ncol=1, bbox_to_anchor=((.6, 1.)), frameon=False)
 
     @staticmethod
     def format_vs_freq(ax):
@@ -106,12 +109,14 @@ class FigurePyramidals(FormatedFigure):
         ax.spines['left'].set_linewidth(1)
         ax.set_xticks(np.arange(0,2000,500))
         sns.despine(ax=ax, trim=True)
-        ax.legend(bbox_to_anchor=(1,1.1))
+        # ax.legend(bbox_to_anchor=(.5,.8), frameon=False)
 
     @staticmethod
     def format_circ(ax):
         ax.set_ylim((0, 1))
-        ax.set_xticks(ax.get_xticks()[::2])
+
+        ax.set_xticks([0, np.pi/2, np.pi])
+        ax.set_xticklabels([r'$0$', r'$\frac{\pi}{2}$', r'$\pi$'])
         ax.set_xlabel('circular std')
 
         ax.set_yticks([])
@@ -119,10 +124,11 @@ class FigurePyramidals(FormatedFigure):
         # ax.tick_params('y', length=0, width=0)
         ax.spines['bottom'].set_linewidth(1)
         sns.despine(ax=ax, left=True, trim=True)
-        ax.legend(bbox_to_anchor=(1,1.1))
+        # ax.legend(loc='upper left', bbox_to_anchor=(-.1,1.1), frameon=False, ncol=3)
 
     @staticmethod
     def format_contrast(ax):
+        # ax.get_legend().remove()
         ax.set_ylim((0, 1.0))
         ax.set_xlabel('contrast [%]')
 
@@ -132,7 +138,8 @@ class FigurePyramidals(FormatedFigure):
         ax.set_yticks([])
         handles, labels = ax.get_legend_handles_labels()
         by_label = OrderedDict(zip(labels, handles))
-        ax.legend(by_label.values(), by_label.keys(), loc='upper left', bbox_to_anchor=(.1,1.1))
+        ax.legend(by_label.values(), by_label.keys(), loc='upper left',
+                  bbox_to_anchor=(.1,1.1), frameon=False)
 
         ax.spines['bottom'].set_linewidth(1)
         sns.despine(ax=ax, trim=True, left=True)
@@ -234,8 +241,8 @@ if __name__ == "__main__":
             s = dat.groupby('contrast').std().reset_index()
             pp = sns.pointplot('contrast', 'vector_strength', data=dat, ax=ax['contrast'],
                           palette={'p-units': sns.xkcd_rgb['azure'],
-                                   'pyramidal': sns.xkcd_rgb['dark fuchsia']},
-                          order=[10, 20], hue='cell type', alpha=1, scale=.5)
+                                   'pyramidal': sns.xkcd_rgb['dark fuchsia']}, scale=.4,
+                          order=[10, 20], hue='cell type', alpha=1)
 
         #====================================================================================
         print(r"contrast: \rho={0}    p={1}".format(*stats.pearsonr(df_py.contrast, df_py.vector_strength)))

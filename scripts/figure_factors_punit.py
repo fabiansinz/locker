@@ -52,8 +52,8 @@ ax['contrast'].set_ylim((0, 1))
 sc = ax['stimulus'].scatter(df.frequency, df.vector_strength, c=df.jitter, cmap=plt.get_cmap('viridis'), edgecolors='w',
                             lw=.5, s=20)
 cb = fig.colorbar(sc, ax=ax['stimulus'])
-cb.set_ticks((np.pi / 4, np.pi / 3, np.pi / 2, 2 * np.pi / 3))
-cb.set_ticklabels([r'$\frac{\pi}{4}$', r'$\frac{\pi}{3}$', r'$\frac{\pi}{2}$', r'$\frac{2\pi}{3}$'])
+cb.set_ticks((np.pi / 4 , np.pi / 2,3 *np.pi / 4, np.pi))
+cb.set_ticklabels([r'$\frac{\pi}{4}$', r'$\frac{\pi}{2}$', r'$\frac{3\pi}{2}$', r'$\pi$'])
 cb.set_label('circular std [unit circle circumference]', fontsize=8)
 ax['stimulus'].set_ylim((0, 1))
 ax['stimulus'].tick_params('y', length=0, width=0)
@@ -66,7 +66,7 @@ ax['stimulus'].text(-0.1, 1, 'B', transform=ax['stimulus'].transAxes, fontweight
 
 # =============================================================================
 # --- plot jitter vs. vector strength
-sc = ax['cstd'].scatter(df.jitter, df.vector_strength, c=df.frequency, cmap=plt.get_cmap('viridis'), edgecolors='w',
+sc = ax['cstd'].scatter(df.jitter, df.vector_strength, c=df.frequency, cmap=plt.get_cmap('plasma'), edgecolors='w',
                         lw=.5, s=20)
 cb = fig.colorbar(sc, ax=ax['cstd'], pad=0.2)
 cb.set_label('stimulus frequency [Hz]', fontsize=8)
@@ -95,6 +95,6 @@ sns.despine(ax=ax['cstd'], left=True)
 sns.despine(ax=ax['stimulus'], left=True)
 
 fig.tight_layout()
-fig.subplots_adjust(left=.1, right=0.99, top=.9)
+fig.subplots_adjust(left=.1, right=0.9, top=.9)
 fig.savefig('figures/figure_factors_punit.pdf')
 fig.savefig('figures/figure_factors_punit.png')
