@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('Agg')
 from matplotlib.collections import PolyCollection
 from numpy.fft import fft, fftfreq, fftshift
 from locker import mkdir

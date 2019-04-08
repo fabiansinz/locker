@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('Agg')
+
 from locker import mkdir
 from scripts.config import params as plot_params, FormatedFigure
 # mpl.use('Agg')      # With this line = figure disappears; without this line = warning

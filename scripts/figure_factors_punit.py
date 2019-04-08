@@ -46,6 +46,23 @@ ax['contrast'].set_xlabel('contrast [%]')
 ax['contrast'].text(-0.3, 1, 'A', transform=ax['contrast'].transAxes, fontweight='bold')
 ax['contrast'].set_ylim((0, 1))
 
+# =============================================================================
+# --- statistical analysis
+
+glm = smf.glm('vector_strength ~ frequency * jitter + contrast', data=df, family=sm.families.Gamma()).fit()
+
+print(glm.summary())
+print(glm.pvalues)
+
+print('1 sigma in Frequency domain', np.mean(1 / (2 * np.pi * df.spread)))
+print('min sigma in Frequency domain', np.min(1 / (2 * np.pi * df.spread)))
+print('max sigma in Frequency domain', np.max(1 / (2 * np.pi * df.spread)))
+print('2 sigma in Frequency domain', np.mean(2 / (2 * np.pi * df.spread)))
+
+print(r"contrast: \rho={0}    p={1}".format(*stats.pearsonr(df.contrast, df.vector_strength)))
+df = df[df.contrast == 20]
+print(r"jitter: \rho={0}    p={1}".format(*stats.pearsonr(df.jitter, df.vector_strength)))
+print(r"frequency: \rho={0}    p={1}".format(*stats.pearsonr(df.frequency, df.vector_strength)))
 
 # =============================================================================
 # --- plot frequency vs. vector strength
