@@ -42,7 +42,8 @@ services:
     build: .
     volumes:
       - .:/efish/
-      - $HOME/Dropbox/notebooks/efish:/efish/notebooks
+      - ./notebooks:/efish/notebooks
+#      - $HOME/Dropbox/notebooks/efish:/efish/notebooks
     env_file: .env
     ports:
       - "7777:8888"

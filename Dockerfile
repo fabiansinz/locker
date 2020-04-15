@@ -1,4 +1,4 @@
-FROM datajoint/datajoint
+FROM datajoint/datajoint:python3.6
 
 MAINTAINER Fabian Sinz <sinz@bcm.edu>
 
