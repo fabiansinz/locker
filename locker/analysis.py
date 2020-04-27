@@ -1,7 +1,7 @@
 from collections import OrderedDict
 from itertools import count
 from warnings import warn
-
+import matplotlib.pyplot as plt
 from scipy.interpolate import InterpolatedUnivariateSpline
 from tqdm import tqdm
 from pycircstat import event_series as es
@@ -14,7 +14,7 @@ import pandas as pd
 import seaborn as sns
 import sympy
 from scipy import optimize, stats, signal
-
+from matplotlib.ticker import PercentFormatter
 import datajoint as dj
 
 from .data import Runs, Cells, BaseEOD, Baseline
@@ -630,16 +630,21 @@ class EODStimulusPSTSpikes(dj.Computed):
         df['adelta_f'] = np.abs(df.delta_f)
         df['sdelta_f'] = np.sign(df.delta_f)
         df.sort_values(['adelta_f', 'sdelta_f'], inplace=True)
+        t, e, pe = (BaseEOD() & restrictions).fetch1('time', 'eod_ampl', 'max_idx')
         eod = (Runs() & restrictions).fetch('eod').mean()
         if len(df) > 0:
             whs = df.window_half_size.mean()
             cycles = int(whs * eod) * 2
             db = 2 * whs / 400
-            bins = np.arange(-whs, whs + db, db)
+            bins = np.arange(-whs, whs + db, 1/np.mean(df['eod_frequency']))
+            bins2 = np.arange(-whs, whs + db, db)
+
             # g = np.exp(-np.linspace(-whs, whs, len(bins) - 1) ** 2 / 2 / (whs / 25) ** 2)
             g = np.exp(-np.linspace(-whs, whs, len(bins) - 1) ** 2 / 2 / (whs / 100) ** 2)
             print('Low pass kernel sigma=', whs / 25)
             bin_centers = 0.5 * (bins[1:] + bins[:-1])
+            bin_centers2 = 0.5 * (bins2[1:] + bins2[:-1])
+
             y = [0]
             yticks = []
             i = 0
@@ -648,15 +653,20 @@ class EODStimulusPSTSpikes(dj.Computed):
                 yticks.append(delta_f)
                 n_trials = min(repeats, len(dgr.spikes))
                 dgr = dgr[:n_trials]
-                h, _ = np.histogram(np.hstack(dgr.spikes), bins=bins)
+                
+                h, bin_edges = np.histogram(np.hstack(dgr.spikes), bins=bins)
+                h2, bin_edges2 = np.histogram(np.hstack(dgr.spikes), bins=bins2)
 
                 for sp in dgr.spikes:
-                    ax.plot(sp, 0 * sp + i, '.k', mfc='k', ms=1, zorder=-10, rasterized=False)
+                    ax.scatter(sp, 0 * sp + i, s=0.1, zorder=-10, c='k', edgecolors='none')
                     i += 1
                 y.append(i)
-                h = np.convolve(h, g, mode='same')
-                h *= (y[-1] - y[-2]) / h.max()
-                ax.fill_between(bin_centers, 0 * h + y[-2], h + y[-2], color='silver', zorder=-20)
+
+                h =  (h * (y[-1] - y[-2]) / h.max()) 
+                h2 =  (h2 * (y[-1] - y[-2]) / h2.max()) 
+
+                ax.bar(bin_centers, h, bottom=y[-2], color="lightgray", zorder=-20,  lw=0.2, width=1/np.mean(df['eod_frequency']) ,edgecolor='black')
+                ax.bar(bin_centers2, h2, bottom=y[-2], color="gray", zorder=-20, width=0.0001, edgecolor='none')
 
             if BaseEOD() & restrictions:
                 t, e, pe = (BaseEOD() & restrictions).fetch1('time', 'eod_ampl', 'max_idx')
@@ -676,7 +686,7 @@ class EODStimulusPSTSpikes(dj.Computed):
             ax.set_xticks([-whs, -whs / 2, 0, whs / 2, whs])
 
             ax.set_xticklabels([-10, -5, 0, 5, 10])
-            ax.set_ylabel(r'$\Delta f$ [Hz]')
+            ax.set_ylabel(r'$\Delta f$ [Hz]', fontsize=12)
             ax.tick_params(axis='y', length=3, width=1, which='major')
 
             ax.set_ylim(y[[0, -1]])
@@ -702,7 +712,7 @@ class EODStimulusPSTSpikes(dj.Computed):
 
             h = h.astype(np.float64)
             h *= repeats / h.max() / 2
-            ax.bar(bin_centers, h, align='center', width=db, color='lightgray', zorder=-20, lw=0, label='PSTH')
+            ax.bar(bin_centers, h, align='center', width=db, color='lightgray', zorder=-20, lw=0, label='PSTH', edgecolor='black')
             ax.plot(bin_centers[0] * np.ones(2), [repeats // 8, h.max() * 450 / f_max + repeats // 8], '-',
                     color='darkslategray',
                     lw=3, solid_capstyle='butt')
