@@ -283,7 +283,7 @@ class ISIHistograms(dj.Imported):
         dt = eod_cycles[1] - eod_cycles[0]
         idx = eod_cycles <= 15
         ax.bar(eod_cycles[idx], p[idx], width=dt, color='gray', lw=0, zorder=-10, label='ISI histogram')
-        ax.set_xlabel('EOD cycles', fontsize=12)
+        ax.set_xlabel('EOD cycles')
 
 
 @schema
@@ -393,7 +393,7 @@ class Baseline(dj.Imported):
         print('Vector strength', nu, 'p-value', np.exp(-nu ** 2 * len(t)))
         ax.hist(t, bins=50, color='silver', lw=0, normed=True)
         ax.set_xlim((0, period))
-        ax.set_xlabel('EOD cycle', labelpad=-5, fontsize=12)
+        ax.set_xlabel('EOD cycle', labelpad=-5)
         ax.set_xticks([0, period])
 
         ax.set_xticklabels([0, 1])
@@ -426,8 +426,8 @@ class Baseline(dj.Imported):
         h_f = h_f.astype(np.float64)
         h_f *= repeats / h.max() / 2
         
-        ax.bar(bin_centers, h, align='center', width=db, color='lightblue', zorder=-20, lw=0.1, label='PSTH EOD bin', edgecolor='black')
-        ax.bar(bin_centers_f, h_f, align='center', width=db_f, color='blue', zorder=-20, lw=0, label='PSTH  0.1*EOD bin')
+        ax.bar(bin_centers, h, align='center', width=db, color='xkcd:powder blue', zorder=-20, lw=0.1, label='PSTH EOD bin', edgecolor='black')
+        ax.bar(bin_centers_f, h_f, align='center', width=db_f, color='xkcd:steel blue', zorder=-20, lw=0, label='PSTH  0.1*EOD bin')
         
         ax.plot((bin_centers[0]-db/4) * np.ones(2), [repeats // 8, h.max() * 150 / f_max + repeats // 8], '-',
                 color='darkslategray',
@@ -441,7 +441,7 @@ class Baseline(dj.Imported):
         ax.set_xticks(np.arange(-(cycles // 2) / eod, (cycles // 2 + 1) / eod, 5 / eod))
         ax.set_xticklabels(np.arange(-(cycles // 2), cycles // 2 + 1, 5))
         ax.set_xlim((-(cycles // 2) / eod, (cycles // 2) / eod))
-        ax.set_xlabel('time [EOD cycles]', fontsize=12)
+        ax.set_xlabel('time [EOD cycles]')
 
         # EOD
         if BaseEOD() & self.proj():
@@ -626,7 +626,7 @@ class BaseRate(dj.Imported):
         ax2.set_xticks(np.linspace(0, ep, 5))
         ax2.set_xticklabels([r'$0$', r'$\frac{\pi}{2}$', r'$\pi$', r'$\frac{3\pi}{2}$', r'$2\pi$'])
         ax.bar(time_per, rate[0:len(time_per)], color='lightgray', lw=0, width=dt, align='center', label='PSTH', zorder=-10)
-        ax2.set_ylabel('EOD amplitude [mV]', fontsize=12, va='center')
+        ax2.set_ylabel('EOD amplitude [mV]', va='center')
         ax.axis('tight')
         ax2.axis('tight')
         #ax.set_xticks(np.linspace(0, 2.0, 4))

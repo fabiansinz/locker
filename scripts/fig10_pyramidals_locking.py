@@ -16,7 +16,39 @@ from locker import sanity
 from locker.data import Baseline
 from scripts.config import params as plot_params, FormatedFigure
 import pycircstat as circ
-from scripts.fig8_factors_punit import jitter_yvals
+import matplotlib
+from locker.analysis import *
+from matplotlib import cm
+from itertools import repeat
+
+def jitter_yvals(ax, start_range, offset_range, col='Blues'):
+    unsorted_lines = []
+
+    unsorted_yvals = []
+    for i,l in enumerate(ax.lines):
+        if i%3==0:
+            temp = l.get_data()
+            unsorted_lines.append(temp[1])
+            unsorted_yvals.append(temp[1][0])
+        
+    sorted_yvals = np.argsort(unsorted_yvals)
+    sorted_yvals = [i * 3 for i in sorted_yvals]
+    line_cols = cm.get_cmap(col)
+    colors = line_cols(np.linspace(0.5,1,len(sorted_yvals)))
+    colors = [c for item in colors for c in repeat(item, 3)]
+    new_sort = []
+    for lin in sorted_yvals:
+        new_sort.append(lin)
+        new_sort.append(lin+1)
+        new_sort.append(lin+2)
+    ax.lines = [ax.lines[i] for i in new_sort]
+    offset = np.linspace(-offset_range+start_range, offset_range+start_range*2, (len(ax.lines)/3))
+    for i, (l, c) in enumerate(zip(ax.lines, colors)):
+        ofs = offset[int(np.floor(i/3))]
+        temp = l.get_data()
+        l.set_data(([temp[0][0]+ofs, temp[0][1]+ofs], temp[1]))
+        l.set_color(c)      
+
 
 
 def generate_filename(cell, contrast, base='firstorderspectra'):
@@ -106,7 +138,7 @@ class FigurePyramidals(FormatedFigure):
         ax.spines['left'].set_linewidth(1)
         ax.set_xticks(np.arange(0,600,100))
         sns.despine(ax=ax, trim=True)
-        ax.legend(bbox_to_anchor=(0.9,1.3), frameon=False, ncol=2)
+        # ax.legend(bbox_to_anchor=(0.9,1.3), frameon=False, ncol=2)
 
     @staticmethod
     def format_circ_beat(ax):
@@ -121,6 +153,7 @@ class FigurePyramidals(FormatedFigure):
         # ax.tick_params('y', length=0, width=0)
         ax.spines['bottom'].set_linewidth(1)
         sns.despine(ax=ax, left=True, trim=False)
+        ax.legend(bbox_to_anchor=(0.9,1.3), frameon=False, ncol=2)
         # ax.legend(loc='upper left', bbox_to_anchor=(-.1,1.1), frameon=False, ncol=3)
 
     @staticmethod

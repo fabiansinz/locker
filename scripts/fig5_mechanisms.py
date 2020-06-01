@@ -54,38 +54,38 @@ class FigureMechanisms(FormatedFigure):
     def format_polar_base(ax):
         thetaticks = np.arange(0, 360, 45)
         ax.spines['polar'].set_color(colordict['delta_f'])
-        ax.set_thetagrids(thetaticks, frac=1.3)
+        ax.set_thetagrids(thetaticks)
         ax.set_xticklabels([r'$0$', r'$\frac{1}{8\vartriangle f}$', r'$\frac{1}{4\vartriangle f}$', 
                             r'$\frac{3}{8\vartriangle f}$', r'$\frac{1}{2\vartriangle f}$', \
                             r'$\frac{5}{8\vartriangle f}$', r'$\frac{3}{4\vartriangle f}$', r'$\frac{7}{8\vartriangle f}$'])
         ax.set_yticks([])
         ax.text(-0.8, 1.1, 'B', transform=ax.transAxes, fontweight='bold')
-        ax.text(3.30, 1.05, r'$EOD_f$', transform=ax.transAxes, fontsize=8)
+        ax.text(3.30, 1.05, r'$EOD_f$', transform=ax.transAxes)
         
     @staticmethod
     def format_polar_beat(ax):
         thetaticks = np.arange(0, 360, 45)
         ax.spines['polar'].set_color(colordict['delta_f'])
-        ax.set_thetagrids(thetaticks, frac=1.3)
+        ax.set_thetagrids(thetaticks)
         ax.set_xticklabels([r'$0$', r'$\frac{1}{8\vartriangle f}$', r'$\frac{1}{4\vartriangle f}$', 
                             r'$\frac{3}{8\vartriangle f}$', r'$\frac{1}{2\vartriangle f}$', \
                             r'$\frac{5}{8\vartriangle f}$', r'$\frac{3}{4\vartriangle f}$', r'$\frac{7}{8\vartriangle f}$'])
         ax.set_yticks([])
         ax.text(-0.8, 1.1, 'D', transform=ax.transAxes, fontweight='bold')
-        ax.text(4.03, 0.9, r'+$\vartriangle f$', transform=ax.transAxes, fontsize=8)
-        ax.text(3.32, 0.9, r'-$\vartriangle f$', transform=ax.transAxes, fontsize=8)
+        ax.text(4.03, 0.9, r'$+\vartriangle f$', transform=ax.transAxes)
+        ax.text(3.16, 0.9, r'$-\vartriangle f$', transform=ax.transAxes)
 
     @staticmethod
     def format_polar_stim(ax):
         thetaticks = np.arange(0, 360, 45)
         ax.spines['polar'].set_color(colordict['stimulus'])
-        ax.set_thetagrids(thetaticks, frac=1.3)
+        ax.set_thetagrids(thetaticks)
         ax.set_xticklabels([r'$0$', r'$\frac{1}{8f_s}$', r'$\frac{1}{4f_s}$', r'$\frac{3}{8f_s}$', r'$\frac{1}{2f_s}$', \
                             r'$\frac{5}{8f_s}$', r'$\frac{3}{4f_s}$', r'$\frac{7}{8f_s}$'])
         ax.set_yticks([])
         ax.text(-0.8, 1.1, 'E', transform=ax.transAxes, fontweight='bold')
-        ax.text(4.35, 0.9, r'+$f_s$', transform=ax.transAxes, fontsize=8)
-        ax.text(3.01, 0.9, r'-$f_s$', transform=ax.transAxes, fontsize=8)
+        ax.text(4.35, 0.9, r'$+f_s$', transform=ax.transAxes)
+        ax.text(2.85, 0.9, r'$-f_s$', transform=ax.transAxes)
 
 
     @staticmethod
@@ -235,8 +235,9 @@ if __name__ == "__main__":
                         ax[k].set_xticks(np.arange(-2 * eod, 3 * eod, eod))
                         ax[k].set_xlim((-f_max, f_max))
                         ax[k].set_ylim((0, F_stim.max()*1.21))
-                        ax[k].set_xticklabels([])
                         ax[k].set_xticklabels(np.arange(-2, 3))
                         ax[k].set_xlabel('frequency [EODf]')
+                    ax['spectrum_base'].set_xlabel('frequency [EODf]', fontsize = 7)
+                    ax['spectrum_base'].tick_params(labelsize=7)
                     
                     

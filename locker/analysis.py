@@ -127,7 +127,7 @@ class PlotableSpectrum:
             handles, labels = ax.get_legend_handles_labels()
 
             by_label = OrderedDict(sorted(zip(labels, handles), key=label_order))
-            ax.legend(by_label.values(), by_label.keys(), bbox_to_anchor=(1, 1.3),
+            ax.legend(by_label.values(), by_label.keys(), bbox_to_anchor=(1, 1.3), frameon=False,
                       ncol=len(by_label) if ncol is None else ncol)
 
 
@@ -665,8 +665,8 @@ class EODStimulusPSTSpikes(dj.Computed):
                 h =  (h * (y[-1] - y[-2]) / h.max()) 
                 h2 =  (h2 * (y[-1] - y[-2]) / h2.max()) 
 
-                ax.bar(bin_centers, h, bottom=y[-2], color="lightgray", zorder=-20,  lw=0.2, width=1/np.mean(df['eod_frequency']) ,edgecolor='black')
-                ax.bar(bin_centers2, h2, bottom=y[-2], color="gray", zorder=-20, width=0.0001, edgecolor='none')
+                ax.bar(bin_centers, h, bottom=y[-2], color="xkcd:powder blue", zorder=-20,  lw=0.2, width=1/np.mean(df['eod_frequency']) ,edgecolor='black')
+                ax.bar(bin_centers2, h2, bottom=y[-2], color="xkcd:steel blue", zorder=-20, width=0.0001, edgecolor='none')
 
             if BaseEOD() & restrictions:
                 t, e, pe = (BaseEOD() & restrictions).fetch1('time', 'eod_ampl', 'max_idx')
@@ -678,7 +678,7 @@ class EODStimulusPSTSpikes(dj.Computed):
                 e = Baseline.clean_signal(e, eod, t[1] - t[0])
                 dy = 0.15 * (y[-1] - y[0])
                 e = (e - e.min()) / (e.max() - e.min()) * dy
-                ax.plot(t, e + y[-1], lw=2, color='steelblue', zorder=-15, label='EOD')
+                ax.plot(t, e + y[-1]+80, lw=2, color='steelblue', zorder=-15, label='EOD')
                 y.append(y[-1] + 1.2 * dy)
 
             y = np.asarray(y)
@@ -686,7 +686,7 @@ class EODStimulusPSTSpikes(dj.Computed):
             ax.set_xticks([-whs, -whs / 2, 0, whs / 2, whs])
 
             ax.set_xticklabels([-10, -5, 0, 5, 10])
-            ax.set_ylabel(r'$\Delta f$ [Hz]', fontsize=12)
+            ax.set_ylabel(r'$\Delta f$ [Hz]')
             ax.tick_params(axis='y', length=3, width=1, which='major')
 
             ax.set_ylim(y[[0, -1]])

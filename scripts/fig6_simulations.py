@@ -17,7 +17,7 @@ class SimulationFigure:
         sns.set_context('paper')
         with plt.rc_context(plot_params):
             gs = plt.GridSpec(4, 7)
-            self.fig = plt.figure(figsize=(10, 9), dpi=600)
+            self.fig = plt.figure(figsize=(5, 4.5), dpi=600)
 
             self.ax = {
                 'stimulus_spectrum': self.fig.add_subplot(gs[0, 0:5]), 
@@ -70,7 +70,7 @@ class SimulationFigure:
         ax['stimulus_spectrum'].text(-0.1, 1, 'A', transform=ax['stimulus_spectrum'].transAxes, fontweight='bold')
         ax['membrane_spectrum'].text(-0.1, 1, 'B', transform=ax['membrane_spectrum'].transAxes, fontweight='bold')
         ax['sim_spike_spectrum'].text(-0.1, 1, 'C', transform=ax['sim_spike_spectrum'].transAxes, fontweight='bold')
-        ax['real_spike_spectrum'].text(-0.07, 1, 'D', transform=ax['real_spike_spectrum'].transAxes, fontweight='bold')
+        ax['real_spike_spectrum'].text(-0.1, 1, 'D', transform=ax['real_spike_spectrum'].transAxes, fontweight='bold')
 
         ax['real_spike_spectrum'].set_xticklabels(['%.0f' % xt for xt in ax['real_spike_spectrum'].get_xticks()])
         for aname in ['stimulus_spectrum', 'membrane_spectrum', 'sim_spike_spectrum']:

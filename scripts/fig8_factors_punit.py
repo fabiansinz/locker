@@ -148,8 +148,7 @@ print(r"frequency: \rho={0}    p={1}".format(*stats.pearsonr(df2.frequency, df2.
 
 # =============================================================================
 # --- plot frequency vs. vector strength stimulus
-sc = ax['stimulus_s'].scatter(df.frequency, df.vector_strength, c=df.jitter, cmap=plt.get_cmap('viridis'), edgecolors='w',
-                            lw=.5, s=20)
+sc = ax['stimulus_s'].scatter(df.frequency, df.vector_strength, c=df.jitter, cmap=plt.get_cmap('viridis'), edgecolors='w', lw=.5, s=20)
 #position = fig.add_axes([0.59,0.12,0.008,0.34])
 cb = fig.colorbar(sc, ax=ax['stimulus_s'], pad=-0.1, shrink=0.9)
 cb.set_ticks((np.pi / 4 , np.pi / 2,3 *np.pi / 4, np.pi))

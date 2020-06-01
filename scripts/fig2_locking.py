@@ -37,7 +37,7 @@ class FigureLocking(FormatedFigure):
     def format_scatter(ax):
         sns.despine(ax=ax, trim=True)
         ax.set_xlabel('time [EOD cycles]')
-        ax.legend(bbox_to_anchor=(1, 1.07))
+        ax.legend(bbox_to_anchor=(1, 1.07), frameon=False)
         ax.text(-0.06, 1.02, 'A', transform=ax.transAxes, fontweight='bold')
 
     def format_figure(self):
@@ -64,7 +64,7 @@ if __name__ == "__main__":
             print("\t\tcontrast: %.2f%%" % (contrast,))
 
             target_trials = spectrum * runs & cell & dict(contrast=contrast, am=0, n_harmonics=0)
-
+            print(len(target_trials))
             if len(target_trials) > 0:
                 with FigureLocking(filename=generate_filename(cell, contrast=contrast, base=base_name)) as (fig, ax):
                     mydf = np.unique(target_trials.fetch('delta_f'))

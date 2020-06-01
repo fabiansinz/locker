@@ -44,7 +44,7 @@ class FigureIntroPunit(FormatedFigure):
         ax.set_xticks(np.linspace(0, 15, 6))
         ax.tick_params(labelsize=10)
         ax.set_xticklabels(np.linspace(0, 15, 6).astype(int))
-        ax.legend()
+        ax.legend(frameon=False)
         ax.text(-0.1, 1.01, 'D', transform=ax.transAxes, fontweight='bold')
 
     @staticmethod
@@ -64,9 +64,9 @@ class FigureIntroPunit(FormatedFigure):
         #ax.set_xlim((0, 1.2))
 
         ax.tick_params(axis='both', length=0, width=0, which='major', labelsize=10)
-        ax.set_xlabel('Phase', fontsize=12)
+        ax.set_xlabel('Phase', fontsize=10)
         sns.despine(ax=ax, left=True, right=True, trim=True)
-        ax.legend(ncol=1)
+        ax.legend(ncol=1, frameon=False)
         ax.tick_params(labelsize=10)
         xl, xh = ax.get_xlim()
 
@@ -83,13 +83,13 @@ class FigureIntroPunit(FormatedFigure):
         
 
         # ax.legend(ncol=1, bbox_to_anchor=((.3,1.)))
-        ax.legend(ncol=1, bbox_to_anchor=((.6, 1.)))
+        ax.legend(ncol=1, bbox_to_anchor=((.6, 1.)), frameon=False)
 
     @staticmethod
     def format_scatter(ax):
         sns.despine(ax=ax, left=True)
-        ax.set_xlabel('time [EOD cycles]', fontsize=12)
-        ax.legend(ncol=4, loc=0, bbox_to_anchor=(1, 1.1))
+        ax.set_xlabel('time [EOD cycles]', fontsize=10)
+        ax.legend(ncol=4, loc=0, bbox_to_anchor=(1, 1.1), frameon=False)
         ax.text(-0.07, 1.01, 'E', transform=ax.transAxes, fontweight='bold')
         ax.tick_params(labelsize=10)
         
@@ -97,7 +97,7 @@ class FigureIntroPunit(FormatedFigure):
     def format_polar(ax):
         thetaticks = np.arange(0, 360, 45)
         ax.spines['polar'].set_color(colordict['eod'])
-        ax.set_thetagrids(thetaticks, frac=1.3)
+        ax.set_thetagrids(thetaticks)
         ax.set_xticklabels([r'$0$', r'$\frac{1}{8f_{EOD}}$', r'$\frac{1}{4f_{EOD}}$', r'$\frac{3}{8f_{EOD}}$', r'$\frac{1}{2f_{EOD}}$', \
                             r'$\frac{5}{8f_{EOD}}$', r'$\frac{3}{4f_{EOD}}$', r'$\frac{7}{8f_{EOD}}$'], fontsize=10)
         #ax.set_yticks([])
