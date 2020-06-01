@@ -11,7 +11,6 @@ from scripts.config import params as plot_params, FormatedFigure
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 
-
 class FigureBeatStim(FormatedFigure):
     def prepare(self):
         sns.set_context('paper')
@@ -20,12 +19,10 @@ class FigureBeatStim(FormatedFigure):
         with plt.rc_context(plot_params):
             self.ax = {}
             self.fig = plt.figure(figsize=(7, 2), dpi=400)
-            self.ax['difference'] = plt.subplot2grid((1,14), (0, 11), rowspan=1, colspan =4, fig=self.fig)
-            self.ax['scatter'] = plt.subplot2grid((1,14), (0, 0), rowspan=1, colspan=4, fig=self.fig)
-            self.ax['scatter2'] = plt.subplot2grid((1,14), (0, 5), rowspan=1, colspan=4, fig=self.fig)
-            #self.ax['difference'] = self.fig.add_subplot(1, 3, 3)
-            #self.ax['scatter'] = self.fig.add_subplot(1, 3, 1)
-            #self.ax['scatter2'] = self.fig.add_subplot(1, 3, 2)
+
+            self.ax['difference'] = self.fig.add_subplot(1, 3, 3)
+            self.ax['scatter'] = self.fig.add_subplot(1, 3, 1)
+            self.ax['scatter2'] = self.fig.add_subplot(1, 3, 2)
 
     @staticmethod
     def format_difference(ax):
@@ -37,7 +34,7 @@ class FigureBeatStim(FormatedFigure):
         ax.tick_params('both', length=3, width=1, which='both')
         ax.set_ylim((-.8, 0.5))
         ax.set_yticks(np.arange(-.75, .75, .25))
-        ax.text(-0.3, 1, 'C', transform=ax.transAxes, fontweight='bold')
+        ax.text(-0.4, 1, 'C', transform=ax.transAxes, fontweight='bold')
 
     @staticmethod
     def format_colorscatter(ax):
@@ -76,7 +73,8 @@ class FigureBeatStim(FormatedFigure):
     def format_figure(self):
         sns.despine(self.fig, offset=1, trim=True)
         # self.fig.tight_layout()
-        self.fig.subplots_adjust(right=0.99, left=.04, bottom=.15, wspace=.2)
+        self.fig.subplots_adjust(right=0.99, left=.02, bottom=.2, wspace=.2)
+
 
 def plot_locking(df, ax, legend=False):
     n = {}
@@ -105,17 +103,14 @@ def plot_locking(df, ax, legend=False):
                        width="100%",  # width = 30% of parent_bbox
                        height="100%",  # height : 1 inch
                        # loc=4,
-                       bbox_to_anchor=(0.90, .1, .2, .2),
+                       bbox_to_anchor=(0.85, .1, .2, .2),
                        bbox_transform=ax.transAxes
                        # bbox_to_anchor=(0.8, 0.2, .25, .25)
                        )
     axins.bar(0, n['beat, but not stimulus'], color=colordict['delta_f'], align='center')
     axins.bar(1, n['not beat, but stimulus'], color=colordict['stimulus'], align='center')
     axins.bar(2, n['beat and stimulus'], color=sns.xkcd_rgb['teal blue'], align='center')
-    locs = axins.get_yticks()
-    print(max(locs))
-    axins.set_yticks([])
-    axins.set_xticks([])
+    axins.axis('off')
     ax.plot(*2 * (np.linspace(0, 1, 2),), '--k', zorder=-10)
     n['all'] = np.sum(list(n.values()))
     print(n)

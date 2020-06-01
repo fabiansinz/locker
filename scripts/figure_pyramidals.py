@@ -2,7 +2,7 @@ import matplotlib
 matplotlib.use('Agg')
 
 from collections import OrderedDict
-from matplotlib.collections import PolyCollection
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -14,7 +14,6 @@ from locker import data
 from locker import mkdir
 from locker import sanity
 from locker.data import Baseline
-from locker.analysis import PhaseLockingHistogram
 from scripts.config import params as plot_params, FormatedFigure
 import pycircstat as circ
 
@@ -33,14 +32,17 @@ class FigurePyramidals(FormatedFigure):
         sns.set_style('ticks')
         sns.set_context('paper')
         with plt.rc_context(plot_params):
-            self.fig = plt.figure(figsize=(10, 7))
-            gs = plt.GridSpec(2, 13)
+            self.fig = plt.figure(figsize=(7, 7))
+            gs = plt.GridSpec(3, 12)
             self.ax = {
-                'spectrum': self.fig.add_subplot(gs[:2, 6:]),
-                'ISI': self.fig.add_subplot(gs[0, :5]),
-                'cycle': self.fig.add_subplot(gs[1, :5]),
+                'spectrum': self.fig.add_subplot(gs[:2, 4:]),
+                'ISI': self.fig.add_subplot(gs[0, :4]),
+                'cycle': self.fig.add_subplot(gs[1, :4]),
+                'vs_freq': self.fig.add_subplot(gs[2, :4]),
             }
             self.ax['cycle_ampl'] = self.ax['cycle'].twinx()
+            self.ax['circ'] = self.fig.add_subplot(gs[2, 4:8])
+            self.ax['contrast'] = self.fig.add_subplot(gs[2, 8:])
 
     @staticmethod
     def format_ISI(ax):
@@ -48,9 +50,7 @@ class FigurePyramidals(FormatedFigure):
         ax.set_yticks([])
         ax.set_xlim((0, 15))
         ax.legend(frameon=False)
-        ax.text(-0.05, 0.95, 'A', transform=ax.transAxes, fontweight='bold')
-        ax.set_xticks(np.linspace(0, 15, 6))
-        ax.set_xticklabels(np.linspace(0, 15, 6).astype(int))
+        ax.text(-0.2, 1, 'A', transform=ax.transAxes, fontweight='bold')
 
     @staticmethod
     def format_spectrum(ax):
@@ -59,36 +59,90 @@ class FigurePyramidals(FormatedFigure):
         ax.spines['bottom'].set_linewidth(1)
         ax.legend(loc='upper right', ncol=3, bbox_transform=ax.transAxes, frameon=False)
         sns.despine(ax=ax, left=True, trim=True, offset=5)
-        yl = ax.get_ylim()
-        ax.set_yticks(np.arange(0, max(yl)-(max(yl)/17), max(yl)/17))
-        ax.set_yticklabels(np.hstack((np.arange(-400,0,50), np.arange(50,450,50))))
-        ax.set_ylabel(r'$\Delta f$ [Hz]', fontsize=12)
-        ax.yaxis.tick_right()
-        ax.yaxis.set_label_position("right")
-        ax.set_xlabel('frequency [Hz]', fontsize=12)
-        ax.text(-0.05, 0.975, 'C', transform=ax.transAxes, fontweight='bold')
+        ax.set_yticks([])
+        ax.set_xlabel('frequency [Hz]')
+        ax.text(-0.05, 1, 'C', transform=ax.transAxes, fontweight='bold')
+
+    # @staticmethod
+    # def format_cycle(ax):
+    #     sns.despine(ax=ax, left=True)
+    #     ax.legend(loc='upper right')
+    #     ax.text(-0.2, 1, 'B', transform=ax.transAxes, fontweight='bold')
 
     @staticmethod
     def format_cycle(ax):
-        ax.text(-0.05, 0.9, 'B', transform=ax.transAxes, fontweight='bold')
+        ax.text(-0.16, 1.01, 'B', transform=ax.transAxes, fontweight='bold')
         yl, yh = ax.get_ylim()
         ax.set_ylim((yl, 1.6 * yh))
         ax.set_yticks([])
+        ax.set_xticks(np.linspace(-.6, 1.2, 7))
+        ax.set_xticklabels(np.linspace(-.6, 1.2, 7))
         # ax.tick_params(axis='both', length=0, width=0, which='major')
-        ax.set_xlabel('time [ms]', fontsize=12)
-        sns.despine(top=True, left=True, right=True, trim=False)
+        ax.set_xlim((-.6, 1.2))
+        ax.set_xlabel('time [ms]')
+        sns.despine(ax=ax, left=True, right=True, trim=True)
         ax.legend(ncol=1, frameon=False)
-    
+
     @staticmethod
     def format_cycle_ampl(ax):
-        #ax.tick_params(axis='y', length=3, width=1, which='major')
-        #ax.set_yticks(np.arange(-2,4))
-        sns.despine(top=True, left=True, right=True, trim=True)
-        ax.yaxis.set_visible(False)
+        ax.tick_params(axis='y', length=3, width=1, which='major')
+        ax.set_yticks(np.arange(-2,4))
+        sns.despine(ax=ax, trim=True)
         yl, yh = ax.get_ylim()
+        ax.yaxis.set_label_position("left")
         ax.set_ylim((yl, 1.6 * yh))
-        ax.set_yticks([])
+        ax.set_xlim((-.6, 1.2))
+        ax.set_xticks(np.arange(-.6, 1.5, .3))
+        ax.set_xticklabels(['{:.1f}'.format(a) for a in np.arange(-.6, 1.5, .3)])
+
         ax.legend(ncol=1, bbox_to_anchor=((.6, 1.)), frameon=False)
+
+    @staticmethod
+    def format_vs_freq(ax):
+        ax.set_xlabel('frequency [Hz]')
+        ax.set_ylabel('vector strength stimulus')
+        ax.set_xlim((0, 1800))
+        ax.set_ylim((0, 1))
+        ax.tick_params('y', length=3, width=1)
+        ax.text(-0.2, 1, 'D', transform=ax.transAxes, fontweight='bold')
+        ax.spines['bottom'].set_linewidth(1)
+        ax.spines['left'].set_linewidth(1)
+        ax.set_xticks(np.arange(0,2000,500))
+        sns.despine(ax=ax, trim=True)
+        # ax.legend(bbox_to_anchor=(.5,.8), frameon=False)
+
+    @staticmethod
+    def format_circ(ax):
+        ax.set_ylim((0, 1))
+
+        ax.set_xticks([0, np.pi/2, np.pi])
+        ax.set_xticklabels([r'$0$', r'$\frac{\pi}{2}$', r'$\pi$'])
+        ax.set_xlabel('circular std')
+
+        ax.set_yticks([])
+        ax.text(-0.1, 1, 'E', transform=ax.transAxes, fontweight='bold')
+        # ax.tick_params('y', length=0, width=0)
+        ax.spines['bottom'].set_linewidth(1)
+        sns.despine(ax=ax, left=True, trim=True)
+        # ax.legend(loc='upper left', bbox_to_anchor=(-.1,1.1), frameon=False, ncol=3)
+
+    @staticmethod
+    def format_contrast(ax):
+        # ax.get_legend().remove()
+        ax.set_ylim((0, 1.0))
+        ax.set_xlabel('contrast [%]')
+
+        ax.set_ylabel('')
+        ax.text(-0.1, 1, 'F', transform=ax.transAxes, fontweight='bold')
+        # ax.tick_params('y', length=0, width=0)
+        ax.set_yticks([])
+        handles, labels = ax.get_legend_handles_labels()
+        by_label = OrderedDict(zip(labels, handles))
+        ax.legend(by_label.values(), by_label.keys(), loc='upper left',
+                  bbox_to_anchor=(.1,1.1), frameon=False)
+
+        ax.spines['bottom'].set_linewidth(1)
+        sns.despine(ax=ax, trim=True, left=True)
 
     def format_figure(self):
         fig.tight_layout()
@@ -104,7 +158,7 @@ if __name__ == "__main__":
     # target_trials = alys.FirstOrderSpikeSpectra() * data.Runs() & restr
     target_trials = alys.FirstOrderSpikeSpectra() * data.Runs() & restr
 
-    with FigurePyramidals(filename='figures/figure09factor-pyramidals.pdf') as (fig, ax):
+    with FigurePyramidals(filename='figures/figure08factor-pyramidals.pdf') as (fig, ax):
         # --- plot ISI histogram
         data.ISIHistograms().plot(ax=ax['ISI'], restrictions=restr)
 
@@ -164,7 +218,6 @@ if __name__ == "__main__":
         df_pu['spread'] = df_pu['stim_std'] / df_pu['eod'] / 2 / np.pi
         df_pu['jitter'] = df_pu['stim_std']  # rename to avoid conflict with std function
         df_pu['cell type'] = 'p-units'
-        
         #====================================================================================
         # exclude runs that have only one spike and, thus, artificially high locking
         rel_py = data.Runs() * alys.FirstOrderSignificantPeaks() * alys.StimulusSpikeJitter() \
@@ -181,6 +234,49 @@ if __name__ == "__main__":
         df_py['spread'] = df_py['stim_std'] / df_py['eod'] / 2 / np.pi
         df_py['jitter'] = df_py['stim_std']  # rename to avoid conflict with std function
         df_py['cell type'] = 'pyramidal'
-
+        #====================================================================================
+        df = pd.concat([df_pu[df_pu.stimulus_coeff == 1], df_py[df_py.stimulus_coeff == 1]])
+        for (c, ct), dat in df.groupby(['cell_id', 'cell type']):
+            mu = dat.groupby('contrast').mean().reset_index()
+            s = dat.groupby('contrast').std().reset_index()
+            pp = sns.pointplot('contrast', 'vector_strength', data=dat, ax=ax['contrast'],
+                          palette={'p-units': sns.xkcd_rgb['azure'],
+                                   'pyramidal': sns.xkcd_rgb['dark fuchsia']}, scale=.4,
+                          order=[10, 20], hue='cell type', alpha=1)
 
         #====================================================================================
+        print(r"contrast: \rho={0}    p={1}".format(*stats.pearsonr(df_py.contrast, df_py.vector_strength)))
+
+        df_py = df_py[df_py.contrast == 20]
+        df_pu = df_pu[df_pu.contrast == 20]
+
+        print(
+            r'Correlation stimulus frequency and locking \rho={:.2g}, p={:.2g}'.format(
+                *stats.pearsonr(df_py.eod + df_py.delta_f,
+                               df_py.vector_strength)))
+        print(r'Correlation jitter and locking \rho={:.2g}, p={:.2g}' \
+              .format(*stats.pearsonr(df_py.jitter, df_py.vector_strength)))
+        # print(r'Correlation spread and locking \rho=%.2g, p=%.2g' % \
+        #       stats.pearsonr(df_py.spread, df_py.vector_strength))
+
+        #====================================================================================
+
+        point_size = 10
+        ax['vs_freq'].scatter(df_pu.frequency, df_pu.vector_strength, edgecolors='w', lw=.5,
+                              color=sns.xkcd_rgb['azure'], \
+                              label='p-units', s=point_size)
+        ax['vs_freq'].scatter(df_py.frequency, df_py.vector_strength, edgecolors='w', lw=.5,
+                              color=sns.xkcd_rgb['dark fuchsia'], \
+                              label='pyramidal', s=point_size)
+
+        # --- circular variance scatter plots
+        ax['circ'].scatter(df_pu.jitter, df_pu.vector_strength, edgecolors='w', lw=.5,
+                           color=sns.xkcd_rgb['azure'], \
+                           label='p-units', s=point_size
+                           )
+        ax['circ'].scatter(df_py.jitter, df_py.vector_strength, edgecolors='w', lw=.5,
+                           color=sns.xkcd_rgb['dark fuchsia'], \
+                           label='pyramidal', s=point_size
+                           )
+
+
