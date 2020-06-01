@@ -395,6 +395,7 @@ class Baseline(dj.Imported):
         ax.set_xlim((0, period))
         ax.set_xlabel('EOD cycle', labelpad=-5)
         ax.set_xticks([0, period])
+
         ax.set_xticklabels([0, 1])
         # ax.set_ylabel('PSTH')
         ax.set_yticks([])
@@ -411,20 +412,27 @@ class Baseline(dj.Imported):
 
         # histogram
         db = 1 / eod
-
         bins = np.arange(-(cycles // 2) / eod, (cycles // 2) / eod + db, db)
         bin_centers = 0.5 * (bins[1:] + bins[:-1])
         h, _ = np.histogram(np.hstack(spikes), bins=bins)
-
         h = h.astype(np.float64)
         f_max = h.max() / db / len(spikes)
-
         h *= repeats / h.max() / 2
-        ax.bar(bin_centers, h, align='center', width=db, color='lightgray', zorder=-20, lw=0, label='PSTH')
-        ax.plot(bin_centers[0] * np.ones(2), [repeats // 8, h.max() * 150 / f_max + repeats // 8], '-',
+        
+        db_f = 1 / (eod*20)
+        bins_f = np.arange(-(cycles // 2) / eod, (cycles // 2) / eod + db_f, db_f)
+        bin_centers_f = 0.5 * (bins_f[1:] + bins_f[:-1])
+        h_f, _ = np.histogram(np.hstack(spikes), bins=bins_f)
+        h_f = h_f.astype(np.float64)
+        h_f *= repeats / h.max() / 2
+        
+        ax.bar(bin_centers, h, align='center', width=db, color='xkcd:powder blue', zorder=-20, lw=0.1, label='PSTH EOD bin', edgecolor='black')
+        ax.bar(bin_centers_f, h_f, align='center', width=db_f, color='xkcd:steel blue', zorder=-20, lw=0, label='PSTH  0.1*EOD bin')
+        
+        ax.plot((bin_centers[0]-db/4) * np.ones(2), [repeats // 8, h.max() * 150 / f_max + repeats // 8], '-',
                 color='darkslategray',
                 lw=3, solid_capstyle='butt')
-        ax.text(bin_centers[0] + db / 4, repeats / 6, '150 Hz')
+        ax.text(bin_centers[0]-db/8, repeats / 6, '150 Hz')
         for y, sp in zip(count(start=repeats // 2 + 1), spikes[:min(repeats, len(spikes))]):
             ax.vlines(sp, 0 * sp + y, 0 * sp + y + 1, 'k', rasterized=False,
                       label='spikes' if y == repeats // 2 + 1 else None)
@@ -596,7 +604,38 @@ class BaseRate(dj.Imported):
         self.insert1(key)
 
     def plot(self, ax, ax2, find_range=True):
-        t, rate, ampl, mi, ma = self.fetch1('time', 'eod_rate', 'eod_ampl', 'min_idx', 'max_idx')
+        t, rate, ampl, mi, ma, ep = self.fetch1('time', 'eod_rate', 'eod_ampl', 'min_idx', 'max_idx', 'eod_period')
+        print(ep)
+        n = len(t)
+#        if find_range:
+#            if len(mi) < 2:
+#                if mi[0] < n // 2:
+#                    mi = np.hstack((mi, [n]))
+#                else:
+#                    mi = np.hstack(([0], mi + 1))
+#
+#            idx = slice(*mi)
+#        else:
+#            idx = slice(None)
+        dt = t[1] - t[0]
+#        t = t - t[mi[0]]
+        time_per = t[t<ep]
+        amp_per = ampl[0:len(time_per)]
+        ax2.plot(time_per, amp_per, color=colordict['eod'], label='EOD', zorder=10, lw=2)
+        ax2.set_xlim((0, ep))
+        ax2.set_xticks(np.linspace(0, ep, 5))
+        ax2.set_xticklabels([r'$0$', r'$\frac{\pi}{2}$', r'$\pi$', r'$\frac{3\pi}{2}$', r'$2\pi$'])
+        ax.bar(time_per, rate[0:len(time_per)], color='lightgray', lw=0, width=dt, align='center', label='PSTH', zorder=-10)
+        ax2.set_ylabel('EOD amplitude [mV]', va='center')
+        ax.axis('tight')
+        ax2.axis('tight')
+        #ax.set_xticks(np.linspace(0, 2.0, 4))
+        # ax.tick_params(axis='both', length=0, width=0, which='major')
+        #ax.set_xticklabels([r'$0$', r'$\frac{\pi}{2}$', r'$\pi$', r'$\frac{3\pi}{2}$', r'$2\pi$'])
+        #ax.set_xticklabels(['{:.1f}'.format(a) for a in np.arange(0, 2.0, .4)])
+        
+    def plot_polar(self, ax, find_range=True):
+        t, rate, ampl, mi, ma, ep = self.fetch1('time', 'eod_rate', 'eod_ampl', 'min_idx', 'max_idx', 'eod_period')
         n = len(t)
         if find_range:
             if len(mi) < 2:
@@ -610,13 +649,9 @@ class BaseRate(dj.Imported):
             idx = slice(None)
         dt = t[1] - t[0]
         t = t - t[mi[0]]
-        ax2.plot(t[idx], ampl[idx], color=colordict['eod'], label='EOD', zorder=10, lw=2)
-        ax.bar(t[idx], rate[idx], color='lightgray', lw=0, width=dt, align='center', label='PSTH', zorder=-10)
-        # ax.set_ylabel('firing rate [Hz]')
-        ax2.set_ylabel('EOD amplitude [mV]')
-        ax.axis('tight')
-        ax2.axis('tight')
-        ax.set_xlabel('time [ms]')
+
+        bar_width = 2*np.pi/len(t[idx])*0.9
+        ax.bar((t[idx] / ep) * 2 * np.pi + bar_width/2, rate[idx], color='darkgray', lw=0, width=bar_width, align='center', label='PSTH', zorder=-10)
 
 
 @schema

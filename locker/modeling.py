@@ -434,6 +434,7 @@ class PUnitSimulations(dj.Computed):
         M /= M[idx].max()
         ax.fill_between(w[idx], 0 * w[idx], M[idx], color='k')
         ax.set_ylim((0, 1.5))
+        ax.set_xlim([0, 2000])
         fonsize=self.axes_font_size(ax)
         ax.text(fstim - eod, 0.47, r'$\Delta f$', rotation=0, horizontalalignment='center',
                 verticalalignment='bottom', fontsize=fonsize)
@@ -457,6 +458,7 @@ class PUnitSimulations(dj.Computed):
         idx = (w > 0) & (w < f_max)
 
         ax.set_ylim((0, .8))
+        ax.set_xlim([0, 2000])
         ax.set_yticks(np.arange(0, 1, .4))
         fonsize=self.axes_font_size(ax)
         ax.fill_between(w[idx], 0 * w[idx], vs[idx], color='k')

@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from locker.analysis import SecondOrderSpikeSpectra
 from locker.modeling import *
 from scripts.config import params as plot_params
-
+from matplotlib.patches import ConnectionPatch
 
 class SimulationFigure:
     def __init__(self, filename=None):
@@ -16,12 +16,17 @@ class SimulationFigure:
         sns.set_style('ticks')
         sns.set_context('paper')
         with plt.rc_context(plot_params):
-            self.fig, self.ax = plt.subplots(4, 1, figsize=(7, 6), dpi=400, sharex=True)
+            gs = plt.GridSpec(4, 7)
+            self.fig = plt.figure(figsize=(5, 4.5), dpi=600)
+
             self.ax = {
-                'stimulus_spectrum': self.ax[0],
-                'membrane_spectrum': self.ax[1],
-                'sim_spike_spectrum': self.ax[2],
-                'real_spike_spectrum': self.ax[3],
+                'stimulus_spectrum': self.fig.add_subplot(gs[0, 0:5]), 
+                'membrane_spectrum': self.fig.add_subplot(gs[1, 0:5]), 
+                'sim_spike_spectrum': self.fig.add_subplot(gs[2, 0:5]), 
+                'real_spike_spectrum': self.fig.add_subplot(gs[3, 0:5]),
+                'flowchart1': self.fig.add_subplot(gs[0, 5:]),
+                'flowchart2': self.fig.add_subplot(gs[1, 5:]),
+                'flowchart3': self.fig.add_subplot(gs[2, 5:])
             }
 
             # with sns.axes_style('ticks'):
@@ -42,7 +47,7 @@ class SimulationFigure:
         ax['membrane_spectrum'].yaxis.labelpad = 17
         ax['real_spike_spectrum'].yaxis.labelpad = 2
         ax['sim_spike_spectrum'].yaxis.labelpad = 2
-        ax['real_spike_spectrum'].set_ylim((0, 1.5))
+        #ax['real_spike_spectrum'].set_ylim((0, 1.5))
         sns.despine(ax=ax['stimulus_spectrum'], left=True, offset=0)
         ax['stimulus_spectrum'].set_xticklabels([])
         sns.despine(ax=ax['membrane_spectrum'], offset=0, left=True)
@@ -57,11 +62,11 @@ class SimulationFigure:
 
         fig.tight_layout()
         fig.subplots_adjust(left=0.1, right=0.95)
-
+        
         if ax['real_spike_spectrum'].legend_ is not None:
-            ax['real_spike_spectrum'].legend_.set_bbox_to_anchor((1., 1.),
+            ax['real_spike_spectrum'].legend_.set_bbox_to_anchor((1., 1.2),
                                                              transform=ax['real_spike_spectrum'].transAxes)
-
+            ax['real_spike_spectrum'].legend_.get_frame().set_linewidth(0.0)
         ax['stimulus_spectrum'].text(-0.1, 1, 'A', transform=ax['stimulus_spectrum'].transAxes, fontweight='bold')
         ax['membrane_spectrum'].text(-0.1, 1, 'B', transform=ax['membrane_spectrum'].transAxes, fontweight='bold')
         ax['sim_spike_spectrum'].text(-0.1, 1, 'C', transform=ax['sim_spike_spectrum'].transAxes, fontweight='bold')
@@ -100,6 +105,28 @@ for ri, hs in itertools.product([5,13],[0,1]):
             PUnitSimulations().plot_stimulus_spectrum(key, ax['stimulus_spectrum'])
             PUnitSimulations().plot_membrane_potential_spectrum(key, ax['membrane_spectrum'])
             PUnitSimulations().plot_spike_spectrum(key, ax['sim_spike_spectrum'])
+            im1 = plt.imread("flowchart1.png")
+            im2 = plt.imread("flowchart2.png")
+            im3 = plt.imread("flowchart3.png")
+            ax['flowchart1'].imshow(im1)
+            arrow = ax['flowchart1'].get_position()
+            arrow2 = ax['flowchart2'].get_position()
 
+            ax['flowchart1'].axis('off')
+            ax['flowchart2'].imshow(im2)
+            ax['flowchart2'].axis('off')
+            ax['flowchart3'].imshow(im3)
+            ax['flowchart3'].axis('off')
+            ax['flowchart1'].annotate("", (0.5, -0.45), (0.5, -0.05), xycoords=ax['flowchart1'].transAxes, arrowprops=dict(facecolor='black', shrink=0.02, width = 2))
+            ax['flowchart2'].annotate("", (0.5, -0.45), (0.5, -0.05), xycoords=ax['flowchart2'].transAxes, arrowprops=dict(facecolor='black', shrink=0.02, width = 2))
+            
+            ax['flowchart1'].annotate("", (0.45, 0.45), (0.25, 0.63), xycoords=ax['flowchart1'].transAxes, arrowprops=dict(facecolor='black', shrink=0.02, width = 2))
+            ax['flowchart1'].annotate("", (0.55, 0.45), (0.75, 0.63), xycoords=ax['flowchart1'].transAxes, arrowprops=dict(facecolor='black', shrink=0.02, width = 2))
+            
+            ax['flowchart2'].annotate("", (0.5, 0.4), (0.5, 0.6), xycoords=ax['flowchart2'].transAxes, arrowprops=dict(facecolor='black', shrink=0.02, width = 2))
+            ax['flowchart3'].annotate("", (0.5, 0.35), (0.5, 0.58), xycoords=ax['flowchart3'].transAxes, arrowprops=dict(facecolor='black', shrink=0.02, width = 2))
+            #plt.arrow(arrow.x0, arrow.y0, arrow2.x0-arrow.x0, arrow2.y0 - arrow.y0)
+            #con = ConnectionPatch(xyA=xy, xyB=xy2, coordsA="data", coordsB="data", axesA=ax['flowchart2'], axesB=ax['flowchart1'], arrowstyle="->", shrinkB=5)
+            #ax['flowchart2'].add_artist(con)
             restrictions = dict(key, refined=True)
             SecondOrderSpikeSpectra().plot(ax['real_spike_spectrum'], restrictions, f_max=2000, ncol=4)

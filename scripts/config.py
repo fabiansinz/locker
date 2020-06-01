@@ -1,7 +1,7 @@
 import abc
 import matplotlib.pyplot as plt
 
-params = {'axes.labelsize': 7,
+params = {'axes.labelsize': 10,
           'axes.labelpad': 1.0,
           'axes.titlesize': 7,
           'xtick.labelsize': 7,
@@ -23,7 +23,7 @@ params = {'axes.labelsize': 7,
           'axes.linewidth': 1,
           'font.family': 'sans-serif',
           'font.serif': 'Arial',
-          'font.size': 7,
+          'font.size': 12,
           'text.usetex': False,
           'figure.dpi': 300,
           'figure.facecolor': 'w',
